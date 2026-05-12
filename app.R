@@ -1414,6 +1414,19 @@ ui <- page_navbar(
       actionButton("gel_clear", "🔄  Clear All Data", class = "btn-clear")
     ),
     
+    div(style = "padding: 0 1rem 0.5rem;",
+      div(class = "qc-mode-toggle",
+        tags$button("Gel", id = "gel_btn_gel", class = "qc-mode-btn active",
+          onclick = "Shiny.setInputValue('gel_tab_mode', 'gel', {priority: 'event'});
+                     document.getElementById('gel_btn_gel').classList.add('active');
+                     document.getElementById('gel_btn_western').classList.remove('active');"),
+        tags$button("Western", id = "gel_btn_western", class = "qc-mode-btn",
+          onclick = "Shiny.setInputValue('gel_tab_mode', 'western', {priority: 'event'});
+                     document.getElementById('gel_btn_western').classList.add('active');
+                     document.getElementById('gel_btn_gel').classList.remove('active');")
+      )
+    ),
+    conditionalPanel("input.gel_tab_mode == 'gel' || input.gel_tab_mode == null || input.gel_tab_mode == undefined",
     fluidRow(
       # Left sidebar - Controls
       column(3,
@@ -1430,15 +1443,14 @@ ui <- page_navbar(
         div(class = "lab-card",
           div(class = "lab-card-title", span(class = "step-number", "2"), "Crop (Optional)"),
           div(class = "info-box", tags$span("ℹ", class = "info-icon"),
-            "Click two corners on the image to define crop area, or skip to use full image."),
-          actionButton("gel_crop_start", "Start Crop Selection", class = "btn-secondary"),
-          br(), br(),
-          conditionalPanel(
-            condition = "output.gel_crop_ready",
-            actionButton("gel_apply_crop", "✓ Apply Crop", class = "btn-run"),
-            br(), br(),
-            actionButton("gel_cancel_crop", "✕ Cancel", class = "btn-secondary")
-          )
+            "Drag on the gel image to select crop area. Release, then click Apply to confirm."),
+          fluidRow(
+            column(6, actionButton("gel_apply_crop", "✓ Apply Crop",
+                                   class="btn-run", style="width:100%;")),
+            column(6, actionButton("gel_revert_crop", "↩ Revert Original",
+                                   class="btn-secondary", style="width:100%;"))
+          ),
+          uiOutput("gel_crop_status")
         ),
         
         # Step 3: Mode selection
@@ -1447,8 +1459,8 @@ ui <- page_navbar(
           div(class = "info-box", tags$span("ℹ", class = "info-icon"),
             "Click on the image to mark ladder bands or sample wells."),
           selectInput("gel_mode", "Marking Mode",
-            choices = c("Ladder Bands" = "ladder", "Sample Wells" = "wells"),
-            selected = "ladder")
+            choices = c("Crop" = "crop", "Ladder Bands" = "ladder", "Sample Wells" = "wells"),
+            selected = "crop")
         ),
         
         # Step 4: Ladder preset
@@ -1467,7 +1479,7 @@ ui <- page_navbar(
         div(class = "lab-card",
           div(class = "lab-card-title", span(class = "step-number", "5"), "Label Settings"),
           fluidRow(
-            column(6, numericInput("gel_fontsize", "Font Size", value = 16, min = 10, max = 32, step = 2)),
+            column(6, numericInput("gel_fontsize", "Font Size", value = 20, min = 10, max = 32, step = 2)),
             column(6, checkboxInput("gel_bold", "Bold Text", value = FALSE))
           ),
           fluidRow(
@@ -1502,8 +1514,10 @@ ui <- page_navbar(
           conditionalPanel(
             condition = "output.gel_image_loaded",
             div(style = "text-align: center;",
-              plotOutput("gel_plot", height = "600px", 
-                click = "gel_click")
+              plotOutput("gel_plot", height = "600px",
+                click = "gel_click",
+                brush = brushOpts(id="gel_crop_brush", fill="#00C2FF",
+                                   stroke="#00C2FF", opacity=0.2, resetOnNew=TRUE))
             )
           ),
           conditionalPanel(
@@ -1533,6 +1547,116 @@ ui <- page_navbar(
         )
       )
     )
+
+    ),
+
+
+        conditionalPanel("input.gel_tab_mode == 'western'",
+    fluidRow(
+      # Left sidebar — western controls
+      column(3,
+        div(class = "lab-card",
+          div(class = "lab-card-title", span(class = "step-number", "1"), "Upload Western Image"),
+          div(class = "info-box", tags$span("ℹ", class = "info-icon"),
+            "Upload your western blot image. Use the preview panel to crop and label it."),
+          fileInput("gel_western", NULL,
+            accept = c(".tif", ".tiff", ".png", ".jpg", ".jpeg"),
+            buttonLabel = "Browse\u2026", placeholder = "No file selected"),
+          uiOutput("gel_western_status")
+        ),
+
+    "output.gel_western_loaded",
+        div(class = "lab-card",
+          div(class = "lab-card-title", span(class = "step-number", "2"), "Crop (Optional)"),
+          div(class = "info-box", tags$span("ℹ", class = "info-icon"),
+            "Switch to Crop mode, then drag on the preview. Release, then click Apply."),
+          fluidRow(
+            column(6, actionButton("gel_western_crop_apply", "✓ Apply Crop",
+                                   class="btn-run", style="width:100%;")),
+            column(6, actionButton("gel_western_revert_crop", "↩ Revert Original",
+                                   class="btn-secondary", style="width:100%;"))
+          )
+        ),
+
+        div(class = "lab-card",
+          div(class = "lab-card-title", span(class = "step-number", "3"), "Mark Ladder Bands"),
+          div(class = "info-box", tags$span("ℹ", class = "info-icon"),
+            "Click a band on the preview, enter its MW, then click Add."),
+          selectInput("gel_western_mode", "Preview Click Mode",
+            choices = c("Crop" = "crop", "Mark Ladder Bands" = "ladder"),
+            selected = "crop", width = "100%"),
+          conditionalPanel("input.gel_western_mode == 'ladder'",
+            br(),
+            uiOutput("gel_western_ladder_entry"),
+            br(),
+            actionButton("gel_western_clear_bands", "\U1f5d1  Clear All Bands",
+              class = "btn-secondary",
+              style = "font-size:0.78rem;padding:0.35rem 0.7rem;width:100%;")
+          )
+        ),
+
+        div(class = "lab-card",
+          div(class = "lab-card-title", span(class = "step-number", "4"), "Antibody Label"),
+          div(class = "info-box", tags$span("ℹ", class = "info-icon"),
+            "Text shown to the right of the western in the stitched export."),
+          textInput("gel_western_antibody", NULL, placeholder = "e.g. anti-HsUCP1")
+        ),
+
+        div(class = "lab-card",
+          div(class = "lab-card-title", span(class = "step-number", "5"), "Enhance Contrast"),
+          div(class = "info-box", tags$span("ℹ", class = "info-icon"),
+            "0 = no adjustment. Higher values darken bands and lighten background."),
+          sliderInput("gel_western_contrast", NULL,
+            min = 0, max = 15, value = 0, step = 1, width = "100%")
+        ),
+
+        div(class = "lab-card",
+          div(class = "lab-card-title", span(class = "step-number", "6"), "Stitch & Export"),
+          div(class = "info-box", tags$span("ℹ", class = "info-icon"),
+            "Combines the annotated gel (from the Gel tab) with the western below it."),
+          numericInput("gel_gap_px", "Gap (px)", value = 10, min = 0, max = 200, step = 5),
+          selectInput("gel_gap_color", "Gap colour",
+            choices = c("Transparent" = "none", "Black" = "black", "White" = "white"),
+            selected = "none", width = "100%"),
+          br(),
+          downloadButton("gel_stitch_png",      "\u2193 PNG (Gel + Western)",  class = "btn-download"), br(), br(),
+          downloadButton("gel_stitch_tiff", "\u2193 TIFF (Gel + Western)", class = "btn-download"), br(), br(),
+          actionButton("gel_western_clear", "\u2715  Remove Western", class = "btn-secondary")
+        )
+
+      ),
+
+      # Centre — western preview
+      column(7,
+        div(class = "lab-card",
+          div(class = "lab-card-title", "\U0001f9ec  Western Blot Preview"),
+          conditionalPanel("output.gel_western_loaded",
+            div(class = "info-box", tags$span("ℹ", class = "info-icon"),
+              "Select 'Mark Ladder Bands' mode in Step 3 to click bands. Select 'Crop' mode to crop."),
+            div(style = "text-align:center;",
+              plotOutput("gel_western_preview", height = "420px",
+                         click = "gel_western_click",
+                         brush = brushOpts(id="gel_western_crop_brush", fill="#00C2FF",
+                                           stroke="#00C2FF", opacity=0.2, resetOnNew=TRUE)))
+          ),
+          conditionalPanel("!output.gel_western_loaded",
+            div(style = "text-align:center;padding:80px 20px;color:#7A8FAD;",
+              icon("image", style = "font-size:64px;margin-bottom:20px;"),
+              h4("No western image loaded", style = "color:#7A8FAD;"),
+              p("Upload a western blot image to begin"))
+          )
+        )
+      ),
+
+      # Right — western ladder list
+      column(2,
+        div(class = "lab-card",
+          div(class = "lab-card-title", "\U0001f3af Ladder Bands"),
+          uiOutput("gel_western_ladder_list")
+        )
+      )
+    )
+    ) # end western tab
   ),
   nav_panel(
     "UCP1 Proton Conductance", icon = icon("vial"), value = "UCP1",
@@ -1715,7 +1839,13 @@ server <- function(input, output, session) {
     crop_active = FALSE,
     cropped = FALSE,
     marker_observers = list(),
-    plot_trigger = 0  # Increment only when plot needs redraw (add/delete markers, not value edits)
+    plot_trigger = 0,
+    western_image=NULL, western_raw=NULL,
+    western_crop_active=FALSE, western_crop_corners=list(),
+    western_ladder_markers=data.frame(x=numeric(),y=numeric(),mw=numeric(),stringsAsFactors=FALSE),
+    western_pending_click=NULL, western_plot_trigger=0,
+    image_original=NULL, western_original=NULL,
+    gel_crop_pending=NULL, western_crop_pending=NULL
   )
   
   # Ladder presets
@@ -1734,6 +1864,7 @@ server <- function(input, output, session) {
     tryCatch({
       img <- image_read(input$gel_image$datapath)
       img_info <- image_info(img)
+      gel_data$image_original <- img
       
       gel_data$image <- img
       gel_data$image_width <- img_info$width
@@ -1773,78 +1904,21 @@ server <- function(input, output, session) {
   outputOptions(output, "gel_image_loaded", suspendWhenHidden = FALSE)
   
   # Crop mode
-  observeEvent(input$gel_crop_start, {
-    gel_data$crop_active <- TRUE
-    gel_data$crop_corners <- list()
-    showNotification("Click two corners to define crop area", type = "message", duration = 3)
-  })
+
   
-  observeEvent(input$gel_cancel_crop, {
-    gel_data$crop_active <- FALSE
-    gel_data$crop_corners <- list()
-  })
+
   
-  output$gel_crop_ready <- reactive({
-    gel_data$crop_active && length(gel_data$crop_corners) == 2
-  })
-  outputOptions(output, "gel_crop_ready", suspendWhenHidden = FALSE)
+
   
   # Apply crop
-  observeEvent(input$gel_apply_crop, {
-    req(gel_data$image, length(gel_data$crop_corners) == 2)
-    
-    tryCatch({
-      corners <- gel_data$crop_corners
-      x_vals <- c(corners[[1]]$x, corners[[2]]$x)
-      y_vals <- c(corners[[1]]$y, corners[[2]]$y)
-      
-      x_min <- round(min(x_vals))
-      x_max <- round(max(x_vals))
-      y_min <- round(min(y_vals))
-      y_max <- round(max(y_vals))
-      
-      width <- x_max - x_min
-      height <- y_max - y_min
-      
-      y_top <- gel_data$image_height - y_max
-      
-      geometry_str <- sprintf("%dx%d+%d+%d", width, height, x_min, y_top)
-      cropped_img <- image_crop(gel_data$image, geometry_str)
-      
-      gel_data$image <- cropped_img
-      gel_data$image_width <- width
-      gel_data$image_height <- height
-      
-      # Adjust marker positions
-      if (nrow(gel_data$ladder_markers) > 0) {
-        gel_data$ladder_markers$x <- gel_data$ladder_markers$x - x_min
-        gel_data$ladder_markers$y <- gel_data$ladder_markers$y - y_min
-        gel_data$ladder_markers <- gel_data$ladder_markers[
-          gel_data$ladder_markers$x >= 0 & gel_data$ladder_markers$x <= width &
-          gel_data$ladder_markers$y >= 0 & gel_data$ladder_markers$y <= height, ]
-      }
-      
-      if (nrow(gel_data$well_markers) > 0) {
-        gel_data$well_markers$x <- gel_data$well_markers$x - x_min
-        gel_data$well_markers$y <- gel_data$well_markers$y - y_min
-        gel_data$well_markers <- gel_data$well_markers[
-          gel_data$well_markers$x >= 0 & gel_data$well_markers$x <= width &
-          gel_data$well_markers$y >= 0 & gel_data$well_markers$y <= height, ]
-      }
-      
-      gel_data$crop_active <- FALSE
-      gel_data$crop_corners <- list()
-      gel_data$cropped <- TRUE
-      
-      showNotification("✓ Crop applied successfully", type = "message", duration = 2)
-    }, error = function(e) {
-      showNotification(paste("Error cropping:", e$message), type = "error", duration = 5)
-    })
-  })
+
   
   # Handle clicks on image
   observeEvent(input$gel_click, {
     req(gel_data$image)
+    
+    # Ignore clicks when in crop mode — brush handles crop
+    if (!is.null(input$gel_mode) && input$gel_mode == "crop") return()
     
     click <- input$gel_click
     
@@ -1937,7 +2011,7 @@ server <- function(input, output, session) {
       img_width <- gel_data$image_width * scale_factor
       img_height <- gel_data$image_height * scale_factor
       
-      left_pad <- if (nrow(ladder_markers) > 0) ladder_offset + 20 else 0
+      left_pad <- if (nrow(ladder_markers) > 0) max(ladder_offset + 20, round(input$gel_fontsize * 9)) else 0
       
       # Calculate top padding dynamically based on text angle and label length
       if (nrow(well_markers) > 0) {
@@ -2249,7 +2323,7 @@ server <- function(input, output, session) {
       ladder_offset <- input$gel_ladder_offset
       well_offset <- input$gel_well_offset
       
-      left_pad <- if (nrow(ladder_markers) > 0) ladder_offset + 20 else 0
+      left_pad <- if (nrow(ladder_markers) > 0) max(ladder_offset + 20, round(input$gel_fontsize * 6)) else 0
       
       # Calculate top padding dynamically - SAME as preview
       if (nrow(well_markers) > 0) {
@@ -3188,6 +3262,593 @@ server <- function(input, output, session) {
   
   # END CPM CONTOUR PLOTTING SERVER LOGIC
   # ==========================================================================
+
+
+  # ── WESTERN BLOT SERVER ──────────────────────────────────────────────────────
+
+  output$gel_western_loaded <- reactive({ !is.null(gel_data$western_image) })
+  outputOptions(output, "gel_western_loaded", suspendWhenHidden=FALSE)
+
+
+
+  observeEvent(input$gel_western, {
+    req(input$gel_western)
+    tryCatch({
+      img <- image_read(input$gel_western$datapath)
+      gel_data$western_raw            <- img
+      gel_data$western_image          <- img
+      gel_data$western_original       <- img
+      gel_data$western_crop_active    <- FALSE
+      gel_data$western_crop_corners   <- list()
+      gel_data$western_ladder_markers <- data.frame(x=numeric(),y=numeric(),
+                                                     mw=numeric(),stringsAsFactors=FALSE)
+      gel_data$western_pending_click  <- NULL
+      gel_data$western_plot_trigger   <- 0
+      showNotification("\u2713 Western blot loaded", type="message", duration=2)
+    }, error=function(e)
+      showNotification(paste("Error:", e$message), type="error"))
+  })
+
+  observeEvent(input$gel_western_clear, {
+    gel_data$western_image          <- NULL
+    gel_data$western_raw            <- NULL
+    gel_data$western_crop_active    <- FALSE
+    gel_data$western_crop_corners   <- list()
+    gel_data$western_ladder_markers <- data.frame(x=numeric(),y=numeric(),
+                                                   mw=numeric(),stringsAsFactors=FALSE)
+    gel_data$western_pending_click  <- NULL
+    gel_data$western_plot_trigger   <- 0
+    shinyjs::reset("gel_western")
+    showNotification("Western removed", type="message", duration=2)
+  })
+
+  output$gel_western_status <- renderUI({
+    req(gel_data$western_image)
+    info <- image_info(gel_data$western_image)
+    div(class="status-pill ready", div(class="dot"),
+        sprintf("\u2713 %d \u00d7 %d px", info$width, info$height))
+  })
+
+
+
+  observeEvent(input$gel_western_click, {
+    req(gel_data$western_image)
+    cl   <- input$gel_western_click
+    mode <- if (!is.null(input$gel_western_mode)) input$gel_western_mode else "crop"
+    if (mode == "crop" && isTRUE(gel_data$western_crop_active)) {
+      corners <- gel_data$western_crop_corners
+      corners[[length(corners)+1]] <- list(x=cl$x, y=cl$y)
+      gel_data$western_crop_corners <- corners
+      if (length(corners) >= 2) gel_data$western_crop_active <- FALSE
+    } else if (mode == "ladder") {
+      gel_data$western_ladder_markers <- rbind(gel_data$western_ladder_markers,
+        data.frame(x=cl$x, y=cl$y, mw=0, stringsAsFactors=FALSE))
+      gel_data$western_plot_trigger <- gel_data$western_plot_trigger + 1
+    }
+  })
+
+
+
+  output$gel_western_ladder_entry <- renderUI({ NULL })
+
+  output$gel_western_ladder_list <- renderUI({
+    gel_data$western_plot_trigger
+    markers <- isolate(gel_data$western_ladder_markers)
+    if (nrow(markers) == 0)
+      return(p("No bands marked yet.", style="color:#7A8FAD;font-size:0.9rem;"))
+    rows <- lapply(seq_len(nrow(markers)), function(i) {
+      div(style="background:#1E2D45;padding:8px;border-radius:4px;margin-bottom:6px;",
+        div(style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;",
+          span(paste("Band",i), style="color:#7A8FAD;font-size:0.85rem;"),
+          tags$button("\u00d7",
+            style="background:#FF5C5C;color:white;border:none;padding:2px 8px;border-radius:3px;cursor:pointer;",
+            onclick=sprintf("Shiny.setInputValue('gel_western_rm',%d,{priority:'event'})",i))),
+        numericInput(paste0("gel_wmw_",i), NULL, value=if(markers$mw[i]==0) NA else markers$mw[i],
+                     min=0, step=1, width="100%")
+      )
+    })
+    div(style="max-height:300px;overflow-y:auto;", tagList(rows))
+  })
+
+  observeEvent(input$gel_western_rm, {
+    idx <- input$gel_western_rm
+    m   <- gel_data$western_ladder_markers
+    if (idx >= 1 && idx <= nrow(m)) {
+      gel_data$western_ladder_markers <- m[-idx,,drop=FALSE]
+      gel_data$western_plot_trigger   <- gel_data$western_plot_trigger + 1
+    }
+  })
+
+  observeEvent(input$gel_western_clear_bands, {
+    gel_data$western_ladder_markers <- data.frame(x=numeric(),y=numeric(),
+                                                   mw=numeric(),stringsAsFactors=FALSE)
+    gel_data$western_plot_trigger <- gel_data$western_plot_trigger + 1
+    showNotification("Bands cleared", type="message", duration=2)
+  })
+
+  .get_western_processed <- function(for_export=FALSE) {
+    img <- gel_data$western_image
+    if (is.null(img)) return(NULL)
+    cv  <- if (for_export) isolate(input$gel_western_contrast) else input$gel_western_contrast
+    if (!is.null(cv) && !is.na(cv) && cv > 0) {
+      img <- image_normalize(img)
+      for (k in seq_len(min(as.integer(cv), 15)))
+        img <- image_contrast(img, sharpen=FALSE)
+    }
+    img
+  }
+
+  output$gel_western_preview <- renderPlot({
+    req(gel_data$western_image)
+    gel_data$western_plot_trigger
+    img  <- .get_western_processed()
+    rast <- as.raster(img)
+    info <- image_info(img)
+    par(mar=c(0,0,0,0), bg="black")
+    plot(NA, xlim=c(0,info$width), ylim=c(0,info$height),
+         asp=1, xlab="", ylab="", axes=FALSE)
+    rasterImage(rast, 0, 0, info$width, info$height)
+    for (cr in gel_data$western_crop_corners)
+      points(cr$x, cr$y, pch=3, col="#00C2FF", cex=2.5, lwd=2)
+    m <- isolate(gel_data$western_ladder_markers)
+    if (nrow(m) > 0) for (i in seq_len(nrow(m))) {
+      points(m$x[i], m$y[i], pch=16, col="#FF7B47", cex=1.2)
+      if (!is.na(m$mw[i]) && m$mw[i] > 0)
+        text(m$x[i], m$y[i], paste0(m$mw[i]," kDa"),
+             pos=3, col="#FF7B47", cex=0.75, font=2)
+    }
+    if (!is.null(gel_data$western_pending_click))
+      points(gel_data$western_pending_click$x, gel_data$western_pending_click$y,
+             pch=16, col="#00C2FF", cex=2)
+  }, bg="black")
+
+  .gel_stack_western <- function(gel_png_path) {
+    west_src <- .get_western_processed(for_export = TRUE)
+    if (is.null(west_src)) return(gel_png_path)
+
+    gap_px  <- max(0L, as.integer(isolate(input$gel_gap_px)))
+    gap_col <- isolate(input$gel_gap_color)
+    bg      <- if (!is.null(gap_col) && gap_col != "none") gap_col else "none"
+
+    gel_img <- image_read(gel_png_path)
+    gel_w   <- as.integer(image_info(gel_img)$width)
+
+    # Match gel's left padding so western content aligns with gel content
+    gel_lad  <- isolate(gel_data$ladder_markers)
+    lad_off  <- if (!is.null(input$gel_ladder_offset)) isolate(input$gel_ladder_offset) else 60L
+    fsize    <- if (!is.null(input$gel_fontsize)) isolate(input$gel_fontsize) else 20L
+    left_pad <- if (nrow(gel_lad) > 0) max(as.integer(lad_off + 20L), round(fsize * 6)) else 0L
+    west_w   <- max(1L, gel_w - left_pad)   # western content width
+
+    src_w <- as.integer(image_info(west_src)$width)
+    src_h <- as.integer(image_info(west_src)$height)
+    new_h <- max(1L, round(src_h * west_w / src_w))   # proportional height
+
+    # Read current MW values directly from numericInputs
+    w_marks <- isolate(gel_data$western_ladder_markers)
+    if (nrow(w_marks) > 0) {
+      for (i in seq_len(nrow(w_marks))) {
+        v <- isolate(input[[paste0("gel_wmw_", i)]])
+        if (!is.null(v) && !is.na(v) && v > 0) w_marks$mw[i] <- v
+      }
+    }
+
+    # Antibody label column width (horizontal text needs room)
+    ab       <- trimws(isolate(input$gel_western_antibody))
+    ab_col_w <- if (nchar(ab) > 0) max(round(fsize * 4L), round(nchar(ab) * round(fsize * 0.65))) else 0L
+    canvas_w <- gel_w + ab_col_w
+
+    bg_col   <- if (!is.null(input$gel_bg_color) && input$gel_bg_color == "white") "white" else NA
+    tmp_west <- tempfile(fileext = ".png")
+
+    png(tmp_west, width = canvas_w, height = new_h,
+        units = "px", bg = bg_col, res = 96)
+    par(mar = c(0, 0, 0, 0))
+
+    # Plot in canvas pixel space: x 0->canvas_w, y 0=bottom->new_h=top
+    plot(1, type = "n", xlim = c(0, canvas_w), ylim = c(0, new_h),
+         xlab = "", ylab = "", axes = FALSE)
+
+    # Draw western image in content area (right of left_pad) — same layout as gel
+    rasterImage(as.raster(west_src), left_pad, 0, left_pad + west_w, new_h)
+
+    # Ladder labels — IDENTICAL style to gel export
+    if (nrow(w_marks) > 0) {
+      for (i in seq_len(nrow(w_marks))) {
+        mw_val <- w_marks$mw[i]
+        if (!is.na(mw_val) && mw_val > 0) {
+          # Scale click y (0=bottom in src_h space) to export y (0=bottom in new_h space)
+          y_pos   <- w_marks$y[i] / src_h * new_h
+          x_label <- left_pad - 10
+          text(x_label, y_pos, paste0(mw_val, " kDa"),
+               pos = 2, cex = isolate(input$gel_fontsize) / 12,
+               font = if (isTRUE(isolate(input$gel_bold))) 2 else 1)
+          segments(x_label + 5, y_pos, left_pad, y_pos, lwd = 1)
+        }
+      }
+    }
+
+    # Antibody label — horizontal text centred in the right column
+    if (nchar(ab) > 0) {
+      text(gel_w + 8, new_h / 2,
+           ab, adj = c(0, 0.5),
+           cex = isolate(input$gel_fontsize) / 12,
+           font = if (isTRUE(isolate(input$gel_bold))) 2 else 1,
+           col = "black", srt = 0)
+    }
+
+    dev.off()
+
+    # Pad gel image to same total width as western canvas (for clean stacking)
+    west_img <- image_read(tmp_west)
+    if (ab_col_w > 0) {
+      pad     <- image_blank(ab_col_w, image_info(gel_img)$height, color = bg)
+      gel_img <- image_append(c(gel_img, pad), stack = FALSE)
+    }
+
+    gap <- image_blank(canvas_w, max(1L, gap_px), color = bg)
+    out <- image_append(c(gel_img, gap, west_img), stack = TRUE)
+    image_write(out, path = gel_png_path, format = "png")
+    gel_png_path
+  }
+
+
+
+
+
+
+  # Stitch download handlers (use unique IDs gel_stitch_png / gel_stitch_tiff)
+  output$gel_stitch_png <- downloadHandler(
+    filename = function() {
+      paste0("gel_western_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")
+    },
+    content = function(file) {
+      req(gel_data$image)
+      
+      # Use isolate to read markers
+      ladder_markers <- isolate(gel_data$ladder_markers)
+      well_markers <- isolate(gel_data$well_markers)
+      
+      # Use SAME scaling as preview (75%)
+      scale_factor <- 0.75
+      img_width <- gel_data$image_width * scale_factor
+      img_height <- gel_data$image_height * scale_factor
+      
+      ladder_offset <- input$gel_ladder_offset
+      well_offset <- input$gel_well_offset
+      
+      left_pad <- if (nrow(ladder_markers) > 0) max(ladder_offset + 20, round(input$gel_fontsize * 6)) else 0
+      
+      # Calculate top padding dynamically - SAME as preview
+      if (nrow(well_markers) > 0) {
+        text_angle <- as.numeric(input$gel_text_angle)
+        font_size <- input$gel_fontsize
+        
+        # Find longest label
+        max_label_len <- max(nchar(well_markers$label))
+        
+        # Calculate extra space needed based on angle
+        if (text_angle == 45) {
+          # Diagonal: text extends upward at 45°
+          char_width <- font_size * 0.6
+          diagonal_extension <- max_label_len * char_width * sin(pi/4)
+          top_pad <- well_offset + 20 + diagonal_extension
+        } else if (text_angle == 90) {
+          # Vertical: text goes straight up
+          char_width <- font_size * 0.6
+          top_pad <- well_offset + 20 + (max_label_len * char_width * 0.5)
+        } else {
+          # Horizontal: standard padding
+          top_pad <- well_offset + 20
+        }
+      } else {
+        top_pad <- 0
+      }
+      
+      total_width <- img_width + left_pad
+      total_height <- img_height + top_pad
+      
+      # Get background color preference
+      bg_color <- if (input$gel_bg_color == "white") "white" else NA
+      
+      # Transparent or white background
+      png(file, width = total_width, height = total_height,
+          units = "px", bg = bg_color, res = 96)
+      
+      img_raster <- as.raster(gel_data$image)
+      
+      par(mar = c(0, 0, 0, 0))
+      
+      plot(1, type = "n", xlim = c(0, total_width), ylim = c(0, total_height),
+           xlab = "", ylab = "", axes = FALSE, asp = 1)
+      
+      # Draw white rectangle if white background selected
+      if (input$gel_bg_color == "white") {
+        rect(0, 0, total_width, total_height, col = "white", border = NA)
+      }
+      
+      rasterImage(img_raster, left_pad, 0, left_pad + img_width, img_height)
+      
+      # Ladder labels (match preview exactly)
+      if (nrow(ladder_markers) > 0) {
+        for (i in 1:nrow(ladder_markers)) {
+          marker <- ladder_markers[i, ]
+          y_pos <- marker$y * scale_factor  # Scale position!
+          x_label <- left_pad - 10
+          
+          text(x_label, y_pos, paste0(marker$mw, " kDa"),
+               pos = 2, cex = input$gel_fontsize / 12,
+               font = if (input$gel_bold) 2 else 1)
+          
+          segments(x_label + 5, y_pos, left_pad, y_pos, lwd = 1)
+        }
+      }
+      
+      # Well labels with rotation (match preview exactly)
+      if (nrow(well_markers) > 0) {
+        text_angle <- as.numeric(input$gel_text_angle)
+        
+        for (i in 1:nrow(well_markers)) {
+          marker <- well_markers[i, ]
+          x_pos <- marker$x * scale_factor + left_pad  # Scale position!
+          y_label <- img_height + 10
+          
+          # Adjust positioning based on angle
+          if (text_angle == 0) {
+            # Horizontal
+            text(x_pos, y_label, marker$label,
+                 pos = 3, cex = input$gel_fontsize / 12,
+                 font = if (input$gel_bold) 2 else 1, srt = 0)
+          } else if (text_angle == 90) {
+            # Vertical
+            text(x_pos, y_label, marker$label,
+                 adj = c(0, 0.5), cex = input$gel_fontsize / 12,
+                 font = if (input$gel_bold) 2 else 1, srt = 90)
+          } else {
+            # Diagonal (45 degrees)
+            text(x_pos, y_label, marker$label,
+                 adj = c(0, 0), cex = input$gel_fontsize / 12,
+                 font = if (input$gel_bold) 2 else 1, srt = 45)
+          }
+          
+          segments(x_pos, y_label - 5, x_pos, img_height, lwd = 1)
+        }
+      }
+      
+      dev.off()
+      
+      tryCatch(
+        .gel_stack_western(file),
+        error = function(e) showNotification(
+          paste("Export error:", e$message), type="error", duration=5)
+      )
+      showNotification("✓ Gel+Western exported!", type = "message", duration = 3)
+    }
+  )
+
+    output$gel_stitch_tiff <- downloadHandler(
+    filename = function() {
+      paste0("gel_western_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".tiff")
+    },
+    content = function(file) {
+      req(gel_data$image)
+      
+      ladder_markers <- isolate(gel_data$ladder_markers)
+      well_markers   <- isolate(gel_data$well_markers)
+      
+      scale_factor <- 0.75
+      img_width    <- gel_data$image_width  * scale_factor
+      img_height   <- gel_data$image_height * scale_factor
+      
+      ladder_offset <- input$gel_ladder_offset
+      well_offset   <- input$gel_well_offset
+      left_pad      <- if (nrow(ladder_markers) > 0) ladder_offset + 20 else 0
+      
+      if (nrow(well_markers) > 0) {
+        text_angle    <- as.numeric(input$gel_text_angle)
+        font_size     <- input$gel_fontsize
+        max_label_len <- max(nchar(well_markers$label))
+        if (text_angle == 45) {
+          char_width <- font_size * 0.6
+          top_pad    <- well_offset + 20 + max_label_len * char_width * sin(pi / 4)
+        } else if (text_angle == 90) {
+          char_width <- font_size * 0.6
+          top_pad    <- well_offset + 20 + (max_label_len * char_width * 0.5)
+        } else {
+          top_pad <- well_offset + 20
+        }
+      } else {
+        top_pad <- 0
+      }
+      
+      total_width  <- img_width  + left_pad
+      total_height <- img_height + top_pad
+      bg_color     <- if (input$gel_bg_color == "white") "white" else "transparent"
+      
+      # TIFF at 300 dpi for publication quality
+      tiff(file,
+           width      = total_width,
+           height     = total_height,
+           units      = "px",
+           bg         = bg_color,
+           res        = 300,
+           compression = "lzw")
+      
+      img_raster <- as.raster(gel_data$image)
+      par(mar = c(0, 0, 0, 0))
+      plot(1, type = "n", xlim = c(0, total_width), ylim = c(0, total_height),
+           xlab = "", ylab = "", axes = FALSE, asp = 1)
+      
+      if (input$gel_bg_color == "white")
+        rect(0, 0, total_width, total_height, col = "white", border = NA)
+      
+      rasterImage(img_raster, left_pad, 0, left_pad + img_width, img_height)
+      
+      if (nrow(ladder_markers) > 0) {
+        for (i in seq_len(nrow(ladder_markers))) {
+          marker <- ladder_markers[i, ]
+          y_pos  <- marker$y * scale_factor
+          x_label <- left_pad - 10
+          text(x_label, y_pos, paste0(marker$mw, " kDa"),
+               pos = 2, cex = input$gel_fontsize / 12,
+               font = if (input$gel_bold) 2 else 1)
+          segments(x_label + 5, y_pos, left_pad, y_pos, lwd = 1)
+        }
+      }
+      
+      if (nrow(well_markers) > 0) {
+        text_angle <- as.numeric(input$gel_text_angle)
+        for (i in seq_len(nrow(well_markers))) {
+          marker  <- well_markers[i, ]
+          x_pos   <- marker$x * scale_factor + left_pad
+          y_label <- img_height + 10
+          if (text_angle == 0) {
+            text(x_pos, y_label, marker$label,
+                 pos = 3, cex = input$gel_fontsize / 12,
+                 font = if (input$gel_bold) 2 else 1, srt = 0)
+          } else if (text_angle == 90) {
+            text(x_pos, y_label, marker$label,
+                 adj = c(0, 0.5), cex = input$gel_fontsize / 12,
+                 font = if (input$gel_bold) 2 else 1, srt = 90)
+          } else {
+            text(x_pos, y_label, marker$label,
+                 adj = c(0, 0), cex = input$gel_fontsize / 12,
+                 font = if (input$gel_bold) 2 else 1, srt = 45)
+          }
+          segments(x_pos, y_label - 5, x_pos, img_height, lwd = 1)
+        }
+      }
+      
+      dev.off()
+
+      # Stack western blot below gel
+      tryCatch({
+        wt <- .get_western_processed(for_export=TRUE)
+        if (!is.null(wt)) {
+          gi  <- image_read(file)
+          gw  <- as.integer(image_info(gi)$width)
+          sw  <- as.integer(image_info(wt)$width)
+          sh  <- as.integer(image_info(wt)$height)
+          nh  <- max(1L, round(sh * gw / sw))
+          wt  <- image_resize(wt, sprintf("%dx%d!", gw, nh))
+          gc2 <- isolate(input$gel_gap_color)
+          bg2 <- if (!is.null(gc2) && gc2!="none") gc2 else "none"
+          gp  <- image_blank(gw, max(1L, as.integer(isolate(input$gel_gap_px))), color=bg2)
+          image_write(image_append(c(gi, gp, wt), stack=TRUE), path=file,
+                      format="tiff", options=c("compression=lzw"))
+        }
+      }, error=function(e)
+        showNotification(paste("TIFF stitch error:", e$message), type="error", duration=5))
+      showNotification("\u2713 TIFF exported successfully!", type = "message", duration = 3)
+    }
+  )
+
+  # Gel crop status
+  output$gel_crop_status <- renderUI({
+    if (!is.null(gel_data$gel_crop_pending)) {
+      b <- gel_data$gel_crop_pending
+      div(style="color:#00C2FF;font-size:0.8rem;margin-top:0.5rem;",
+          sprintf("~%d x %d px selected -- click Apply to confirm",
+                  round(abs(b$xmax-b$xmin)), round(abs(b$ymax-b$ymin))))
+    } else if (isTRUE(gel_data$cropped)) {
+      div(style="color:#7A8FAD;font-size:0.8rem;margin-top:0.5rem;", "Image is cropped.")
+    }
+  })
+
+  observeEvent(input$gel_crop_brush, {
+    req(gel_data$image)
+    gel_data$gel_crop_pending <- input$gel_crop_brush
+  })
+
+  observeEvent(input$gel_apply_crop, {
+    req(gel_data$image, gel_data$gel_crop_pending)
+    b  <- gel_data$gel_crop_pending
+    iw <- gel_data$image_width; ih <- gel_data$image_height
+    sf <- 0.75
+    lad_off  <- if (!is.null(input$gel_ladder_offset)) input$gel_ladder_offset else 60
+    left_pad <- if (nrow(gel_data$ladder_markers) > 0) lad_off + 20L else 0L
+    x_min <- max(0L, round((b$xmin - left_pad) / sf))
+    x_max <- min(iw,  round((b$xmax - left_pad) / sf))
+    y_min_img <- max(0L, round(ih - b$ymax / sf))
+    y_max_img <- min(ih,  round(ih - b$ymin / sf))
+    cw <- max(0L, x_max - x_min); ch <- max(0L, y_max_img - y_min_img)
+    if (cw < 10 || ch < 10) {
+      showNotification("Selection too small.", type="warning")
+      gel_data$gel_crop_pending <- NULL; return()
+    }
+    tryCatch({
+      gel_data$image        <- image_crop(gel_data$image, geometry_area(cw, ch, x_min, y_min_img))
+      gel_data$image_width  <- cw
+      gel_data$image_height <- ch
+      gel_data$cropped      <- TRUE
+      gel_data$gel_crop_pending <- NULL
+      gel_data$ladder_markers <- data.frame(x=numeric(),y=numeric(),mw=numeric(),
+                                             id=character(),stringsAsFactors=FALSE)
+      gel_data$well_markers   <- data.frame(x=numeric(),y=numeric(),label=character(),
+                                             id=character(),stringsAsFactors=FALSE)
+      showNotification(sprintf("Cropped to %d x %d px",cw,ch), type="message", duration=2)
+    }, error=function(e) showNotification(paste("Crop error:",e$message), type="error"))
+  })
+
+  observeEvent(input$gel_revert_crop, {
+    req(gel_data$image_original)
+    info <- image_info(gel_data$image_original)
+    gel_data$image        <- gel_data$image_original
+    gel_data$image_width  <- info$width
+    gel_data$image_height <- info$height
+    gel_data$cropped      <- FALSE
+    gel_data$gel_crop_pending <- NULL
+    gel_data$ladder_markers <- data.frame(x=numeric(),y=numeric(),mw=numeric(),
+                                           id=character(),stringsAsFactors=FALSE)
+    gel_data$well_markers   <- data.frame(x=numeric(),y=numeric(),label=character(),
+                                           id=character(),stringsAsFactors=FALSE)
+    showNotification("Reverted to original image", type="message", duration=2)
+  })
+
+  # Western crop
+  output$gel_western_crop_ready <- reactive({ FALSE })
+  outputOptions(output, "gel_western_crop_ready", suspendWhenHidden=FALSE)
+
+  observeEvent(input$gel_western_crop_brush, {
+    req(gel_data$western_image)
+    if (isTRUE(input$gel_western_mode == "crop"))
+      gel_data$western_crop_pending <- input$gel_western_crop_brush
+  })
+
+  observeEvent(input$gel_western_crop_apply, {
+    req(gel_data$western_image)
+    b <- gel_data$western_crop_pending
+    if (is.null(b)) {
+      showNotification("Switch to Crop mode and drag a selection first.", type="warning"); return()
+    }
+    tryCatch({
+      info <- image_info(gel_data$western_image)
+      iw <- info$width; ih <- info$height
+      x_min <- max(0L, round(min(b$xmin,b$xmax)))
+      x_max <- min(iw,  round(max(b$xmin,b$xmax)))
+      y_min_img <- max(0L, round(ih - max(b$ymin,b$ymax)))
+      y_max_img <- min(ih,  round(ih - min(b$ymin,b$ymax)))
+      cw <- x_max - x_min; ch <- y_max_img - y_min_img
+      if (cw < 10 || ch < 10) { showNotification("Selection too small.", type="warning"); return() }
+      gel_data$western_image        <- image_crop(gel_data$western_image,
+                                                   geometry_area(cw, ch, x_min, y_min_img))
+      gel_data$western_crop_pending <- NULL
+      gel_data$western_ladder_markers <- data.frame(x=numeric(),y=numeric(),
+                                                      mw=numeric(),stringsAsFactors=FALSE)
+      gel_data$western_plot_trigger <- gel_data$western_plot_trigger + 1
+      showNotification(sprintf("Cropped to %d x %d px",cw,ch), type="message", duration=2)
+    }, error=function(e) showNotification(paste("Crop error:",e$message), type="error"))
+  })
+
+  observeEvent(input$gel_western_revert_crop, {
+    req(gel_data$western_original)
+    gel_data$western_image          <- gel_data$western_original
+    gel_data$western_crop_pending   <- NULL
+    gel_data$western_ladder_markers <- data.frame(x=numeric(),y=numeric(),
+                                                   mw=numeric(),stringsAsFactors=FALSE)
+    gel_data$western_plot_trigger <- gel_data$western_plot_trigger + 1
+    showNotification("Reverted to original western", type="message", duration=2)
+  })
 
   observeEvent(input$nav, {
     if (input$nav %in% c("BCA", "CPM", "CPMQC", "CPMCONTOUR", "UCP1", "AKTA", "GEL")) nav_select("nav", input$nav)
