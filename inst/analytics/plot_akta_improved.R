@@ -86,91 +86,181 @@ plot_akta_improved <- function(
   ## ========================================================================
   ##                        HELPER FUNCTIONS
   ## ========================================================================
-  
-  # Function to read UNICORN CSV file
+
+  # Detect which UNICORN CSV format a file uses.
+  # Returns "matrix"   — UTF-16LE tab-separated transposed matrix (classic UNICORN 7 export)
+  #         "columnar" — UTF-8 comma-separated columnar export (newer UNICORN 7 export)
+  detect_unicorn_format <- function(filepath) {
+    # Try reading the first line as UTF-8 plain text
+    first_lines <- tryCatch(
+      readLines(filepath, n = 3, encoding = "UTF-8", warn = FALSE),
+      error = function(e) character(0)
+    )
+    # Columnar format has trace-type names (UV, Fraction, Cond etc.) in row 2
+    if (length(first_lines) >= 2) {
+      row2 <- first_lines[2]
+      if (grepl("UV|Fraction|Cond", row2, ignore.case = FALSE)) {
+        return("columnar")
+      }
+    }
+    return("matrix")
+  }
+
+  # Parse columnar CSV (UTF-8, comma-separated, 3-row header)
+  # Row 1: run names  |  Row 2: trace type  |  Row 3: units  |  Rows 4+: data pairs
+  # Returns a named list: $uv, $fractions, $conductance, $percent_b  (each data.frame or NULL)
+  read_unicorn_columnar <- function(filepath) {
+    raw <- utils::read.csv(filepath, header = FALSE,
+                           stringsAsFactors = FALSE, check.names = FALSE,
+                           fileEncoding = "UTF-8-BOM", na.strings = "")
+    if (nrow(raw) < 4) stop("Columnar file has fewer than 4 rows.")
+
+    trace_types <- trimws(as.character(raw[2, ]))   # Row 2: UV / Fraction / % Cond / Cond
+    units       <- trimws(as.character(raw[3, ]))   # Row 3: ml / mAU / ...
+    data_rows   <- raw[4:nrow(raw), ]               # Rows 4+: actual data
+
+    # Helper: find column index where row 2 exactly matches a label
+    find_col <- function(label) which(trace_types == label)
+
+    # Extract a (volume, value) pair from two column indices
+    extract_col_pair <- function(vol_col, val_col) {
+      vols <- suppressWarnings(as.numeric(as.character(data_rows[[vol_col]])))
+      vals <- suppressWarnings(as.numeric(as.character(data_rows[[val_col]])))
+      ok   <- !is.na(vols) & !is.na(vals)
+      if (sum(ok) == 0) return(NULL)
+      data.frame(volume = vols[ok], value = vals[ok])
+    }
+
+    result <- list(uv = NULL, fractions = NULL, conductance = NULL, percent_b = NULL)
+
+    # UV trace (label "UV", units col "mAU")
+    uv_cols <- find_col("UV")
+    if (length(uv_cols) >= 1) {
+      vc <- uv_cols[1]
+      result$uv <- extract_col_pair(vc, vc + 1)
+    }
+
+    # Fractions (label "Fraction")
+    frac_cols <- find_col("Fraction")
+    if (length(frac_cols) >= 1) {
+      vc <- frac_cols[1]
+      vols  <- suppressWarnings(as.numeric(as.character(data_rows[[vc]])))
+      lbls  <- trimws(gsub('"', '', as.character(data_rows[[vc + 1]])))
+      ok    <- !is.na(vols) & nchar(lbls) > 0
+      if (sum(ok) > 0)
+        result$fractions <- data.frame(volume = vols[ok], label = lbls[ok],
+                                        stringsAsFactors = FALSE)
+    }
+
+    # Conductance (label "Cond", not "% Cond")
+    cond_cols <- find_col("Cond")
+    if (length(cond_cols) >= 1) {
+      vc <- cond_cols[1]
+      result$conductance <- extract_col_pair(vc, vc + 1)
+    }
+
+    # % Buffer B / % Cond (label "% Cond")
+    pctb_cols <- find_col("% Cond")
+    if (length(pctb_cols) >= 1) {
+      vc <- pctb_cols[1]
+      result$percent_b <- extract_col_pair(vc, vc + 1)
+    }
+
+    return(result)
+  }
+
+  # Format-aware file reader.
+  # For matrix format: returns transposed aktalst matrix (backward compatible).
+  # For columnar format: returns a parsed list tagged with $format = "columnar".
   read_unicorn_csv <- function(filepath) {
     tryCatch({
       cat(sprintf("   Reading: %s\n", basename(filepath)))
-      
-      raw <- utils::read.delim(
-        filepath,
-        header = FALSE,
-        sep = "\t",
-        fileEncoding = "UTF-16LE",
-        stringsAsFactors = FALSE,
-        check.names = FALSE
-      )
-      
-      mat <- as.matrix(raw)
-      aktalst <- t(mat)
-      
+      fmt <- detect_unicorn_format(filepath)
+
+      if (fmt == "columnar") {
+        parsed <- read_unicorn_columnar(filepath)
+        parsed$format <- "columnar"
+        return(parsed)
+      }
+
+      # Original matrix format (UTF-16LE tab-separated)
+      raw    <- utils::read.delim(filepath, header = FALSE, sep = "\t",
+                  fileEncoding = "UTF-16LE", stringsAsFactors = FALSE,
+                  check.names = FALSE)
+      aktalst        <- t(as.matrix(raw))
+      attr(aktalst, "format") <- "matrix"
       return(aktalst)
-      
+
     }, error = function(e) {
       stop(sprintf("ERROR reading file '%s': %s", basename(filepath), e$message))
     })
   }
-  
-  # Function to extract trace data
-  extract_trace <- function(aktalst, label_name, row_offset = 1) {
-    n_rows <- nrow(aktalst)
-    n_cols <- ncol(aktalst)
-    
+
+  # Extract a trace, dispatching on format.
+  extract_trace <- function(parsed, label_name, row_offset = 1) {
+    fmt <- if (is.list(parsed) && !is.null(parsed$format)) parsed$format else "matrix"
+
+    if (fmt == "columnar") {
+      # Map old label names to columnar list slots
+      slot <- switch(label_name,
+        "UV 1_280" = "uv", "UV" = "uv",
+        "Cond"     = "conductance",
+        "UV 2_260" = NULL,   # not typically in columnar export
+        "Conc B"   = "percent_b",
+        NULL
+      )
+      if (is.null(slot) || is.null(parsed[[slot]])) return(NULL)
+      d <- parsed[[slot]]
+      return(data.frame(volume = d$volume, value = d$value))
+    }
+
+    # Original matrix logic
+    aktalst <- parsed
+    n_rows  <- nrow(aktalst); n_cols <- ncol(aktalst)
     for (r in seq_len(n_rows)) {
       label <- trimws(as.character(aktalst[r, 2]))
       if (is.na(label) || label == "") next
-      
       if (label == label_name) {
         if (r + row_offset > n_rows) return(NULL)
-        
-        x_vals <- aktalst[r, 4:n_cols]
-        y_vals <- aktalst[r + row_offset, 4:n_cols]
-        
-        # Clean and convert to numeric
-        x_vals <- suppressWarnings(as.numeric(x_vals[!is.na(x_vals) & x_vals != ""]))
-        y_vals <- suppressWarnings(as.numeric(y_vals[!is.na(y_vals) & y_vals != ""]))
-        
-        # Ensure equal length
-        min_len <- min(length(x_vals), length(y_vals))
-        if (min_len > 0) {
-          return(data.frame(volume = x_vals[1:min_len], 
-                           value = y_vals[1:min_len]))
-        }
+        x_vals <- suppressWarnings(as.numeric(aktalst[r,              4:n_cols]))
+        y_vals <- suppressWarnings(as.numeric(aktalst[r + row_offset, 4:n_cols]))
+        x_vals <- x_vals[!is.na(x_vals)]; y_vals <- y_vals[!is.na(y_vals)]
+        m <- min(length(x_vals), length(y_vals))
+        if (m > 0) return(data.frame(volume = x_vals[1:m], value = y_vals[1:m]))
       }
     }
     return(NULL)
   }
-  
-  # Function to extract fractions
-  extract_fractions <- function(aktalst) {
-    n_rows <- nrow(aktalst)
-    n_cols <- ncol(aktalst)
-    
+
+  # Extract fractions, dispatching on format.
+  extract_fractions <- function(parsed) {
+    fmt <- if (is.list(parsed) && !is.null(parsed$format)) parsed$format else "matrix"
+
+    if (fmt == "columnar") {
+      if (is.null(parsed$fractions)) return(NULL)
+      return(parsed$fractions)
+    }
+
+    # Original matrix logic
+    aktalst <- parsed
+    n_rows  <- nrow(aktalst); n_cols <- ncol(aktalst)
     for (r in seq_len(n_rows)) {
       label <- trimws(as.character(aktalst[r, 2]))
       if (is.na(label) || label == "") next
-      
       if (label == "Fraction") {
         if (r + 1 > n_rows) return(NULL)
-        
-        x_vals <- aktalst[r, 4:n_cols]
+        x_vals     <- suppressWarnings(as.numeric(aktalst[r,     4:n_cols]))
         frac_labels <- aktalst[r + 1, 4:n_cols]
-        
-        # Clean data
-        x_vals <- suppressWarnings(as.numeric(x_vals[!is.na(x_vals) & x_vals != ""]))
+        x_vals      <- x_vals[!is.na(x_vals)]
         frac_labels <- frac_labels[!is.na(frac_labels) & frac_labels != ""]
-        
-        min_len <- min(length(x_vals), length(frac_labels))
-        if (min_len > 0) {
-          return(data.frame(volume = x_vals[1:min_len],
-                           label = frac_labels[1:min_len],
-                           stringsAsFactors = FALSE))
-        }
+        m <- min(length(x_vals), length(frac_labels))
+        if (m > 0) return(data.frame(volume = x_vals[1:m], label = frac_labels[1:m],
+                                     stringsAsFactors = FALSE))
       }
     }
     return(NULL)
   }
-  
+
   ## ========================================================================
   ##                        READ DATA FILES
   ## ========================================================================

@@ -2251,31 +2251,6 @@
         "Built": "R 4.3.2; ; 2023-11-23 03:06:31 UTC; windows"
       }
     },
-    "rstudioapi": {
-      "Source": "CRAN",
-      "Repository": "https://cran.rstudio.com",
-      "description": {
-        "Package": "rstudioapi",
-        "Title": "Safely Access the RStudio API",
-        "Description": "Access the RStudio API (if available) and provide informative error\n    messages when it's not.",
-        "Version": "0.15.0",
-        "Authors@R": "c(\n    person(\"Kevin\", \"Ushey\", role = c(\"aut\", \"cre\"), email = \"kevin@rstudio.com\"),\n    person(\"JJ\", \"Allaire\", role = c(\"aut\"), email = \"jj@posit.co\"),\n    person(\"Hadley\", \"Wickham\", role = c(\"aut\"), email = \"hadley@posit.co\"),\n    person(\"Gary\", \"Ritchie\", role = c(\"aut\"), email = \"gary@posit.co\"),\n    person(family = \"RStudio\", role = \"cph\")\n    )",
-        "Maintainer": "Kevin Ushey <kevin@rstudio.com>",
-        "License": "MIT + file LICENSE",
-        "URL": "https://rstudio.github.io/rstudioapi/,\nhttps://github.com/rstudio/rstudioapi",
-        "BugReports": "https://github.com/rstudio/rstudioapi/issues",
-        "RoxygenNote": "7.2.3",
-        "Suggests": "testthat, knitr, rmarkdown, clipr, covr",
-        "VignetteBuilder": "knitr",
-        "Encoding": "UTF-8",
-        "NeedsCompilation": "no",
-        "Packaged": "2023-07-07 17:59:12 UTC; jacquelinegutman",
-        "Author": "Kevin Ushey [aut, cre],\n  JJ Allaire [aut],\n  Hadley Wickham [aut],\n  Gary Ritchie [aut],\n  RStudio [cph]",
-        "Repository": "CRAN",
-        "Date/Publication": "2023-07-07 19:10:02 UTC",
-        "Built": "R 4.3.2; ; 2023-11-23 01:31:01 UTC; windows"
-      }
-    },
     "sass": {
       "Source": "CRAN",
       "Repository": "https://cran.rstudio.com",
@@ -3003,16 +2978,58 @@
   },
   "files": {
     "app.R": {
-      "checksum": "104a69d4279da1d14e2d016013d0bd03"
+      "checksum": "d225af0ac8a34b38fcb6d499a8002bf5"
     },
-    "plot_akta_improved.R": {
-      "checksum": "5399489d33313667f4485ba5cc5cb792"
+    "global.R": {
+      "checksum": "f7b8c85202520d4f9a712dd85622bbbf"
     },
-    "softmax_bca_improved.R": {
-      "checksum": "d93772a8c255fd9b826db5e9951a5309"
+    "inst/analytics/plot_akta_improved.R": {
+      "checksum": "5e619283a6b70909afd858cf3633bc40"
     },
-    "tm_analysis_functions.R": {
+    "inst/analytics/softmax_bca_improved.R": {
+      "checksum": "ce3de6991ea98bdbe1b602c7da978edb"
+    },
+    "inst/analytics/tm_analysis_functions.R": {
       "checksum": "1c55dbde02184f972ae49de0bc3caaf6"
+    },
+    "R/mod_akta.R": {
+      "checksum": "dd3a97cb521bf12d31558970715a82c6"
+    },
+    "R/mod_bca.R": {
+      "checksum": "59dbd201daad6d15c3c58ddfd66d50c1"
+    },
+    "R/mod_cpm.R": {
+      "checksum": "08b4e404d3cebe79659c0c8d3c206c74"
+    },
+    "R/mod_cpm_contour.R": {
+      "checksum": "4e86739fbdb69abeb256b3f0b9c3f021"
+    },
+    "R/mod_cpm_qc.R": {
+      "checksum": "22025bbb5d990fa5d60fec17be1c7c7a"
+    },
+    "R/mod_export.R": {
+      "checksum": "06689afead7edb0d73a9822d8bb981bf"
+    },
+    "R/mod_gel.R": {
+      "checksum": "83e1cb9954ffe996b065b737dea76538"
+    },
+    "R/mod_home.R": {
+      "checksum": "39c64d1679c8685b20a30fbef2de5e17"
+    },
+    "R/mod_ucp1.R": {
+      "checksum": "ab694721d91eac5e66052ae32596bf71"
+    },
+    "R/utils_theme.R": {
+      "checksum": "b282aa0b9d2b4c1d82786baa411d842e"
+    },
+    "README.md": {
+      "checksum": "c798e196e1c3fb9ab2089e1df8a1f5f9"
+    },
+    "www/custom.css": {
+      "checksum": "fee1820779e04ce282c20c1772026603"
+    },
+    "www/custom.js": {
+      "checksum": "8070ba49f434d3b6ba8306b08d2ef7ef"
     }
   },
   "users": null
