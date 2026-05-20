@@ -24,104 +24,104 @@ cpm_ui <- function(id) {
   }
 
   shiny::tagList(
-    shiny::div(class = "clear-button-container",
+    shiny::div(style = "display: none;",
       shiny::actionButton(ns("clear"), "\U0001f504  Clear All Data", class = "btn-clear")
     ),
 
-    shiny::fluidRow(
-      shiny::column(4,
-        lab_card(
-          step_title(1, "Upload Data File"),
-          shiny::fileInput(ns("file"), NULL, accept = ".csv",
-                           buttonLabel = "Browse\u2026",
-                           placeholder = "RotorGene Q CSV export"),
-          shiny::uiOutput(ns("file_status"))
-        ),
-
-        lab_card(
-          step_title(2, "Select Sample"),
-          shiny::uiOutput(ns("sample_ui"))
-        ),
-
-        lab_card(
-          step_title(3, "Analysis Mode"),
-          shiny::div(class = "mode-pills",
-            shiny::radioButtons(ns("mode"), NULL,
-              choices = c("Manual range" = "manual", "Auto peak detect" = "auto"),
-              selected = "manual", inline = TRUE)
-          ),
-          shiny::br(),
-          shiny::conditionalPanel(
-            condition = sprintf("input['%s'] == 'manual'", ns("mode")),
-            info_box("Check the Preview tab, then enter the temperature range around your peak."),
-            shiny::fluidRow(
-              shiny::column(6, shiny::numericInput(ns("tlow"),  "Lower T (\u00b0C)", value = 45, step = 0.5)),
-              shiny::column(6, shiny::numericInput(ns("thigh"), "Upper T (\u00b0C)", value = 65, step = 0.5))
-            )
-          ),
-          shiny::conditionalPanel(
-            condition = sprintf("input['%s'] == 'auto'", ns("mode")),
-            info_box("Peaks outside the region of interest are ignored for analysis but still plotted."),
-            shiny::fluidRow(
-              shiny::column(6, shiny::numericInput(ns("tmin"), "Ignore below (\u00b0C)", value = 30, step = 1)),
-              shiny::column(6, shiny::numericInput(ns("tmax"), "Ignore above (\u00b0C)", value = 80, step = 1))
+    shiny::div(class = "sticky-tool",
+      shiny::fluidRow(
+        shiny::column(4,
+          shiny::div(class = "workflow-col",
+            lab_card(
+              step_title(1, "Upload Data File"),
+              shiny::fileInput(ns("file"), NULL, accept = ".csv",
+                               buttonLabel = "Browse\u2026",
+                               placeholder = "RotorGene Q CSV export"),
+              shiny::uiOutput(ns("file_status"))
             ),
-            shiny::numericInput(ns("prominence"), "Min peak prominence (0-1)",
-              value = 0.10, min = 0.01, max = 0.9, step = 0.01)
-          )
-        ),
 
-        lab_card(
-          step_title(4, "Custom Sample Name"),
-          info_box("Override the auto-generated name for cleaner plots and exports."),
-          shiny::textInput(ns("custom_name"), NULL, placeholder = "Leave blank to use original name")
-        ),
+            lab_card(
+              step_title(2, "Select Sample"),
+              shiny::uiOutput(ns("sample_ui"))
+            ),
 
-        lab_card(
-          step_title(5, "Analyse"),
-          shiny::actionButton(ns("run"), "\u25b6  Run Analysis", class = "btn-run"),
-          shiny::br(), shiny::br(),
-          shiny::uiOutput(ns("download_buttons")),
-          shiny::br(),
-          shiny::tags$button("\u2699  Advanced Settings", class = "adv-toggle",
-            onclick = sprintf("$('#%s').slideToggle(200)", ns("adv_panel"))),
-          shiny::div(id = ns("adv_panel"), style = "display:none;",
-            shiny::div(class = "settings-group",
-              shiny::div(class = "settings-group-title", "Peak Detection"),
-              shiny::numericInput(ns("smooth_sigma"), "Smoothing sigma (\u00b0C)",
-                value = 3, min = 0.5, max = 10, step = 0.5),
-              shiny::numericInput(ns("min_sep"), "Min peak separation (\u00b0C)",
-                value = 8, min = 1, max = 20, step = 1),
-              shiny::numericInput(ns("boundary_thresh"), "Boundary threshold (0-1)",
-                value = 0.10, min = 0.01, max = 0.5, step = 0.01)
-            )
-          )
-        )
-      ),
-
-      shiny::column(8,
-        bslib::navset_card_underline(
-          id = ns("tabs"),
-          bslib::nav_panel("\U0001f4e1  Preview",
-            shiny::div(style = "padding:1rem 0;",
-              info_box("Full dF/dT trace. Use to choose your integration range."),
-              shiny::plotOutput(ns("preview_plot"), height = "380px")
-            )
-          ),
-          bslib::nav_panel("\U0001f4c8  Results",
-            shiny::div(style = "padding:1rem 0;",
-              shiny::uiOutput(ns("result_badges")),
-              shiny::plotOutput(ns("result_plot"), height = "400px"),
+            lab_card(
+              step_title(3, "Analysis Mode"),
+              shiny::div(class = "mode-pills",
+                shiny::radioButtons(ns("mode"), NULL,
+                  choices = c("Manual range" = "manual", "Auto peak detect" = "auto"),
+                  selected = "manual", inline = TRUE)
+              ),
               shiny::br(),
-              shiny::uiOutput(ns("results_table"))
+              shiny::conditionalPanel(
+                condition = sprintf("input['%s'] == 'manual'", ns("mode")),
+                info_box("Check the Preview tab, then enter the temperature range around your peak."),
+                shiny::fluidRow(
+                  shiny::column(6, shiny::numericInput(ns("tlow"),  "Lower T (\u00b0C)", value = 45, step = 0.5)),
+                  shiny::column(6, shiny::numericInput(ns("thigh"), "Upper T (\u00b0C)", value = 65, step = 0.5))
+                )
+              ),
+              shiny::conditionalPanel(
+                condition = sprintf("input['%s'] == 'auto'", ns("mode")),
+                info_box("Peaks outside the region of interest are ignored for analysis but still plotted."),
+                shiny::fluidRow(
+                  shiny::column(6, shiny::numericInput(ns("tmin"), "Ignore below (\u00b0C)", value = 30, step = 1)),
+                  shiny::column(6, shiny::numericInput(ns("tmax"), "Ignore above (\u00b0C)", value = 80, step = 1))
+                ),
+                shiny::numericInput(ns("prominence"), "Min peak prominence (0-1)",
+                  value = 0.10, min = 0.01, max = 0.9, step = 0.01)
+              )
+            ),
+
+            lab_card(
+              step_title(4, "Custom Sample Name"),
+              info_box("Override the auto-generated name for cleaner plots and exports."),
+              shiny::textInput(ns("custom_name"), NULL, placeholder = "Leave blank to use original name")
+            ),
+
+            lab_card(
+              step_title(5, "Analyse"),
+              shiny::actionButton(ns("run"), "\u25b6  Run Analysis", class = "btn-run"),
+              shiny::br(), shiny::br(),
+              shiny::uiOutput(ns("download_buttons")),
+              shiny::br(),
+              shiny::tags$button("\u2699  Advanced Settings", class = "adv-toggle",
+                onclick = sprintf("$('#%s').slideToggle(200)", ns("adv_panel"))),
+              shiny::div(id = ns("adv_panel"), style = "display:none;",
+                shiny::div(class = "settings-group",
+                  shiny::div(class = "settings-group-title", "Peak Detection"),
+                  shiny::numericInput(ns("smooth_sigma"), "Smoothing sigma (\u00b0C)",
+                    value = 3, min = 0.5, max = 10, step = 0.5),
+                  shiny::numericInput(ns("min_sep"), "Min peak separation (\u00b0C)",
+                    value = 8, min = 1, max = 20, step = 1),
+                  shiny::numericInput(ns("boundary_thresh"), "Boundary threshold (0-1)",
+                    value = 0.10, min = 0.01, max = 0.5, step = 0.01)
+                )
+              )
             )
-          ),
-          bslib::nav_panel("\U0001f551  History",
-            shiny::div(style = "padding:1rem 0;",
-              shiny::uiOutput(ns("history_ui")),
-              shiny::uiOutput(ns("history_dl"))
+          )  # close workflow-col
+        ),
+
+        shiny::column(8,
+          shiny::div(class = "preview-col",
+            bslib::navset_card_underline(
+              id = ns("tabs"),
+              bslib::nav_panel("\U0001f4e1  Preview",
+                shiny::div(style = "padding:1rem 0;",
+                  info_box("Full dF/dT trace. Use to choose your integration range."),
+                  shiny::plotOutput(ns("preview_plot"), height = "380px")
+                )
+              ),
+              bslib::nav_panel("\U0001f4c8  Results",
+                shiny::div(style = "padding:1rem 0;",
+                  shiny::uiOutput(ns("result_badges")),
+                  shiny::plotOutput(ns("result_plot"), height = "400px"),
+                  shiny::br(),
+                  shiny::uiOutput(ns("results_table"))
+                )
+              )
             )
-          )
+          )  # close preview-col
         )
       )
     )
@@ -136,13 +136,30 @@ cpm_server <- function(id) {
 
     cpm_data    <- shiny::reactiveVal(NULL)
     cpm_results <- shiny::reactiveVal(NULL)
-    cpm_history <- shiny::reactiveVal(list())
 
-    # ---- Clear -----------------------------------------------------------
+    # Single source of truth for "which file is loaded?". Same pattern as
+    # AKTA/BCA/CPM QC - populated by user upload OR the bundled example
+    # on session start. Shape matches shiny::fileInput's data.frame.
+    current_file <- shiny::reactiveVal(NULL)
+
+    # When the example loader fires, it sets this to "2" so the sample
+    # dropdown opens to sample [2] by default. After the renderUI fires
+    # it's reset to NULL so subsequent user uploads use the default
+    # "first choice" behaviour without any special-casing.
+    next_default_sample <- shiny::reactiveVal(NULL)
+
+    .clear_state <- function(reset_inputs = TRUE) {
+      cpm_data(NULL); cpm_results(NULL)
+      if (reset_inputs) {
+        for (id in c("custom_name", "mode", "tlow", "thigh",
+                     "tmin", "tmax", "prominence")) shinyjs::reset(id)
+      }
+    }
+
+    # ---- Clear button (still in DOM, fired by global navbar Clear) -----
     shiny::observeEvent(input$clear, {
-      cpm_data(NULL); cpm_results(NULL); cpm_history(list())
-      for (id in c("file", "custom_name", "mode", "tlow", "thigh",
-                   "tmin", "tmax", "prominence")) shinyjs::reset(id)
+      current_file(NULL); .clear_state()
+      tryCatch(.load_example_file(), error = function(e) NULL)
       shiny::showNotification("CPM data cleared", type = "message", duration = 2)
     })
 
@@ -150,7 +167,7 @@ cpm_server <- function(id) {
     cpm_resolved_name <- shiny::reactive({
       d <- cpm_data()
       shiny::req(d, !is.null(d$sample_names))
-      custom <- trimws(input$custom_name)
+      custom <- trimws(input$custom_name %||% "")
       sid    <- input$sample_id
       if (nchar(custom) > 0) custom
       else {
@@ -159,14 +176,21 @@ cpm_server <- function(id) {
       }
     })
 
-    # ---- File upload -----------------------------------------------------
+    # ---- File upload routing -------------------------------------------
     shiny::observeEvent(input$file, {
-      shiny::req(input$file)
-      cpm_results(NULL)
+      .clear_state()
+      current_file(input$file)
+    }, ignoreInit = TRUE)
+
+    # Parse whatever's in current_file. Single observer = both upload
+    # and example-load paths share the same parse logic.
+    shiny::observeEvent(current_file(), {
+      cf <- current_file()
+      shiny::req(cf)
       tryCatch({
-        cpm_data(read_rotorgene_csv(input$file$datapath))
+        cpm_data(read_rotorgene_csv(cf$datapath))
       }, error = function(e) cpm_data(list(error = conditionMessage(e))))
-    })
+    }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
     output$file_status <- shiny::renderUI({
       shiny::req(cpm_data())
@@ -186,8 +210,17 @@ cpm_server <- function(id) {
       if (!is.null(d$error)) return(NULL)
       choices <- setNames(d$sample_ids,
                           paste0("[", d$sample_ids, "] ", d$sample_names))
+      # Consult-and-clear the deferred default. The example loader sets
+      # this to "2" so the example opens on sample [2]; user uploads
+      # don't set it so we fall back to the first choice as before.
+      pending <- shiny::isolate(next_default_sample())
+      shiny::isolate(next_default_sample(NULL))
+      sel <- if (!is.null(pending) && pending %in% as.character(d$sample_ids))
+               pending
+             else NULL   # let shiny default to first choice
       shiny::tagList(
-        shiny::selectInput(ns("sample_id"), "Sample", choices = choices),
+        shiny::selectInput(ns("sample_id"), "Sample", choices = choices,
+                           selected = sel),
         shiny::uiOutput(ns("sample_confirm"))
       )
     })
@@ -223,13 +256,15 @@ cpm_server <- function(id) {
         theme_cg_dark()
     }, bg = CG_PALETTE$bg_card)
 
-    # ---- Run analysis ----------------------------------------------------
-    shiny::observeEvent(input$run, {
-      shiny::req(cpm_data(), input$sample_id)
+    # ---- Analysis core --------------------------------------------------
+    # Extracted helper so we can fire it from:
+    #   - user clicks "Run Analysis" (input$run)
+    #   - auto-run after a successful parse + sample selection (input$sample_id)
+    .run_analysis <- function() {
       d <- cpm_data()
-      if (!is.null(d$error)) {
-        shiny::showNotification(d$error, type = "error"); return()
-      }
+      if (is.null(d) || !is.null(d$error)) return(invisible())
+      sid <- input$sample_id
+      if (is.null(sid)) return(invisible())
       sname <- cpm_resolved_name()
 
       shiny::withProgress(message = "Analysing CPM\u2026", value = 0, {
@@ -241,7 +276,7 @@ cpm_server <- function(id) {
               T_lower     = input$tlow,
               T_upper     = input$thigh,
               sample_name = sname,
-              sample_id   = input$sample_id
+              sample_id   = sid
             )
           } else {
             calculate_tm_automatic(
@@ -253,34 +288,38 @@ cpm_server <- function(id) {
               min_peak_sep_deg = input$min_sep,
               boundary_thresh  = input$boundary_thresh,
               sample_name      = sname,
-              sample_id        = input$sample_id
+              sample_id        = sid
             )
           }
           shiny::incProgress(0.5, detail = "Rendering\u2026")
           cpm_results(list(res = res, mode = input$mode, sample_name = sname))
           bslib::nav_select(ns("tabs"), "\U0001f4c8  Results")
-
-          # History
-          if (input$mode == "manual") {
-            entry <- list(time = format(Sys.time(), "%H:%M:%S"), sample = sname,
-              tm = res$tm,
-              range = sprintf("%.1f-%.1f", res$T_lower, res$T_upper),
-              area = res$area, fwhm = res$fwhm, mode = "manual")
-          } else {
-            pk1 <- res$peak_results[[1]]
-            entry <- list(time = format(Sys.time(), "%H:%M:%S"), sample = sname,
-              tm = pk1$tm,
-              range = sprintf("%.1f-%.1f", pk1$T_start, pk1$T_end),
-              area = pk1$area, fwhm = NA, mode = "auto",
-              n_peaks = res$n_peaks)
-          }
-          cpm_history(c(cpm_history(), list(entry)))
-
         }, error = function(e) {
           shiny::showNotification(paste("Analysis error:", conditionMessage(e)),
                                   type = "error", duration = 12)
         })
       })
+    }
+
+    # Trigger 1: user clicked "Run Analysis"
+    shiny::observeEvent(input$run, .run_analysis())
+
+    # Trigger 2: auto-run when both data and sample selection are ready.
+    # Same pending-flag pattern as CPM QC - the sample dropdown renders
+    # AFTER cpm_data() is set, so we can't auto-run directly from
+    # observeEvent(cpm_data()). The flag is set when data parses
+    # successfully and cleared after the first auto-run, so changing the
+    # sample selection later doesn't re-trigger automatically.
+    .auto_run_pending <- shiny::reactiveVal(FALSE)
+    shiny::observeEvent(cpm_data(), {
+      d <- cpm_data()
+      if (!is.null(d) && is.null(d$error)) .auto_run_pending(TRUE)
+    }, ignoreInit = TRUE)
+    shiny::observe({
+      if (!isTRUE(.auto_run_pending())) return()
+      shiny::req(cpm_data(), input$sample_id)
+      .auto_run_pending(FALSE)
+      .run_analysis()
     })
 
     # ---- Result badges --------------------------------------------------
@@ -370,45 +409,22 @@ cpm_server <- function(id) {
         utils::write.csv(df, file, row.names = FALSE)
       })
 
-    # ---- History --------------------------------------------------------
-    output$history_ui <- shiny::renderUI({
-      h <- cpm_history()
-      if (length(h) == 0) {
-        return(shiny::p("No analyses run yet.",
-                        style = "color:var(--muted);font-size:0.8rem;"))
+    # ---- Trigger 3: session start with bundled example -----------------
+    # Reuses inst/examples/cpm_qc_simple_example.csv - the same RotorGene
+    # export the CPM QC simple tab uses. We default to sample [2] (the
+    # +GDP measurement) for the CPM Peak preview - a typical use case.
+    .load_example_file <- function() {
+      cf <- .cpm_example_file()
+      if (!is.null(cf)) {
+        next_default_sample("2")
+        current_file(cf)
       }
-      rows <- lapply(rev(h), function(e) {
-        shiny::div(class = "history-row",
-          style = "grid-template-columns: 70px 1fr 80px 120px 80px;",
-          shiny::div(class = "history-time", e$time),
-          shiny::div(style = "font-size:0.78rem;color:var(--txt);overflow:hidden;
-                              text-overflow:ellipsis;white-space:nowrap;", e$sample),
-          shiny::div(class = "history-val", sprintf("%.2f\u00b0C", e$tm)),
-          shiny::div(style = "font-size:0.75rem;color:var(--muted);", e$range),
-          shiny::div(class = "history-val", style = "color:var(--accent-warm);",
-                     sprintf("A=%.4f", e$area))
-        )
-      })
-      do.call(shiny::div, rows)
+    }
+    .example_loader_obs <- shiny::observe({
+      .example_loader_obs$destroy()
+      tryCatch(.load_example_file(), error = function(e)
+        message("[CPM Peak] example load failed: ", conditionMessage(e)))
     })
-
-    output$history_dl <- shiny::renderUI({
-      shiny::req(length(cpm_history()) > 0)
-      shiny::downloadButton(ns("history_csv"), "\u2193 Export History CSV",
-                            class = "btn-download")
-    })
-
-    output$history_csv <- shiny::downloadHandler(
-      filename = function() ts_filename("CPM_history", "csv"),
-      content  = function(file) {
-        h  <- cpm_history()
-        df <- do.call(rbind, lapply(h, function(e)
-          data.frame(Time = e$time, Sample = e$sample, Tm_degC = e$tm,
-                     Range = e$range, Area = e$area,
-                     FWHM = if (is.null(e$fwhm) || is.na(e$fwhm)) NA else e$fwhm,
-                     Mode = e$mode)))
-        utils::write.csv(df, file, row.names = FALSE)
-      })
 
     # ---- Public reactive ------------------------------------------------
     shiny::reactive(cpm_results())
@@ -474,4 +490,42 @@ cpm_server <- function(id) {
     })
     do.call(shiny::tagList, blocks)
   }
+}
+
+# ---- Example data loader --------------------------------------------------
+# Reuses the same RotorGene Q export bundled for CPM QC's simple tab -
+# inst/examples/cpm_qc_simple_example.csv. We don't ship a duplicate
+# because the CPM Peak picker and the CPM QC simple comparison both
+# operate on the same dF/dT data format; one file serves both tools.
+.cpm_example_cache <- new.env(parent = emptyenv())
+
+.cpm_example_file <- function() {
+  if (!is.null(.cpm_example_cache$path) &&
+      file.exists(.cpm_example_cache$path)) {
+    return(data.frame(
+      name = "251210_HsUCP1_QC_ug_Screen_Transpose.csv",
+      datapath = .cpm_example_cache$path,
+      stringsAsFactors = FALSE
+    ))
+  }
+
+  app_dir_local <- if (exists("app_dir", envir = globalenv())) {
+    get("app_dir", envir = globalenv())
+  } else getwd()
+
+  candidates <- unique(c(
+    file.path(app_dir_local, "inst", "examples", "cpm_qc_simple_example.csv"),
+    file.path(getwd(),       "inst", "examples", "cpm_qc_simple_example.csv"),
+    file.path("inst", "examples", "cpm_qc_simple_example.csv")
+  ))
+  src <- candidates[file.exists(candidates)][1]
+  if (is.na(src)) return(NULL)
+
+  tryCatch({
+    out <- file.path(tempdir(), "251210_HsUCP1_QC_ug_Screen_Transpose.csv")
+    file.copy(src, out, overwrite = TRUE)
+    .cpm_example_cache$path <- out
+    data.frame(name = "251210_HsUCP1_QC_ug_Screen_Transpose.csv",
+               datapath = out, stringsAsFactors = FALSE)
+  }, error = function(e) NULL)
 }

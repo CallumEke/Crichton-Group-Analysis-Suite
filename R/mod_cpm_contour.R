@@ -31,7 +31,7 @@ cpm_contour_ui <- function(id) {
   ns <- shiny::NS(id)
 
   shiny::tagList(
-    shiny::div(class = "clear-button-container",
+    shiny::div(style = "display: none;",
       shiny::actionButton(ns("clear"), "\U0001f504  Clear All Data", class = "btn-clear")
     ),
 
