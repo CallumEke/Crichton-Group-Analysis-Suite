@@ -17,7 +17,7 @@
 # including the analytic helpers in inst/analytics/.
 required <- c(
   # Shiny stack
-  "shiny", "bslib", "shinyjs", "DT",
+  "shiny", "bslib", "shinyjs",
   # Plotting & I/O
   "ggplot2", "scales", "gridExtra",
   # Tidyverse pieces used by softmax_bca_improved.R + tm_analysis_functions.R
@@ -53,12 +53,24 @@ library(bslib)
 library(shinyjs)
 library(ggplot2)
 library(scales)
-library(DT)
 library(readr)
 library(dplyr)
 library(tidyr)
 library(gridExtra)
 library(magick)
+
+# -- Shiny upload size limit --------------------------------------------------
+# Default is 5 MB; raise to 20 MB so larger UNICORN exports (long runs,
+# fine-grained datapoints) fit comfortably AND multi-file overlays don't
+# bump up against the limit. This is the upper bound for the TOTAL
+# upload payload - when AKTA users select multiple files at once for
+# overlay plots, the combined size of all selected files must fit
+# under this limit, not each file individually.
+#
+# The same option is also set inside the server function in app.R as a
+# belt-and-braces measure - some Shiny hosting environments don't pick
+# up options() set here in global.R.
+options(shiny.maxRequestSize = 20 * 1024^2)
 
 # -- App directory ------------------------------------------------------------
 # RStudio's Run App button sets wd to the app folder; this guards against
@@ -97,6 +109,6 @@ for (f in c("softmax_bca_improved.R",
 
 # -- Modules ------------------------------------------------------------------
 for (m in c("mod_home", "mod_bca", "mod_cpm", "mod_akta", "mod_gel",
-            "mod_cpm_qc", "mod_cpm_contour", "mod_ucp1", "mod_export")) {
+            "mod_cpm_qc", "mod_cpm_contour", "mod_ucp1")) {
   source(file.path(app_dir, "R", paste0(m, ".R")))
 }

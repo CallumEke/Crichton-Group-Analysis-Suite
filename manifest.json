@@ -34,38 +34,6 @@
         "Built": "R 4.3.2; ; 2025-11-26 20:33:41 UTC; windows"
       }
     },
-    "DT": {
-      "Source": "CRAN",
-      "Repository": "https://cran.rstudio.com",
-      "description": {
-        "Type": "Package",
-        "Package": "DT",
-        "Title": "A Wrapper of the JavaScript Library 'DataTables'",
-        "Version": "0.34.0",
-        "Authors@R": "c(\n    person(\"Yihui\", \"Xie\", role = \"aut\"),\n    person(\"Joe\", \"Cheng\", , \"joe@posit.co\", role = \"aut\"),\n    person(\"Xianying\", \"Tan\", role = \"aut\"),\n    person(\"Garrick\", \"Aden-Buie\", , \"garrick@posit.co\", role = c(\"aut\", \"cre\"),\n           comment = c(ORCID = \"0000-0002-7111-0077\")),\n    person(\"JJ\", \"Allaire\", role = \"ctb\"),\n    person(\"Maximilian\", \"Girlich\", role = \"ctb\"),\n    person(\"Greg\", \"Freedman Ellis\", role = \"ctb\"),\n    person(\"Johannes\", \"Rauh\", role = \"ctb\"),\n    person(\"SpryMedia Limited\", role = c(\"ctb\", \"cph\"),\n           comment = \"DataTables in htmlwidgets/lib\"),\n    person(\"Brian\", \"Reavis\", role = c(\"ctb\", \"cph\"),\n           comment = \"selectize.js in htmlwidgets/lib\"),\n    person(\"Leon\", \"Gersen\", role = c(\"ctb\", \"cph\"),\n           comment = \"noUiSlider in htmlwidgets/lib\"),\n    person(\"Bartek\", \"Szopka\", role = c(\"ctb\", \"cph\"),\n           comment = \"jquery.highlight.js in htmlwidgets/lib\"),\n    person(\"Alex\", \"Pickering\", role = \"ctb\"),\n    person(\"William\", \"Holmes\", role = \"ctb\"),\n    person(\"Mikko\", \"Marttila\", role = \"ctb\"),\n    person(\"Andres\", \"Quintero\", role = \"ctb\"),\n    person(\"Stéphane\", \"Laurent\", role = \"ctb\"),\n    person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\"))\n  )",
-        "Description": "Data objects in R can be rendered as HTML tables using the\n    JavaScript library 'DataTables' (typically via R Markdown or Shiny).\n    The 'DataTables' library has been included in this R package. The\n    package name 'DT' is an abbreviation of 'DataTables'.",
-        "License": "MIT + file LICENSE",
-        "URL": "https://github.com/rstudio/DT",
-        "BugReports": "https://github.com/rstudio/DT/issues",
-        "Imports": "crosstalk, htmltools (>= 0.3.6), htmlwidgets (>= 1.3),\njquerylib, jsonlite (>= 0.9.16), magrittr, promises",
-        "Suggests": "bslib, future, httpuv, knitr (>= 1.8), rmarkdown, shiny (>=\n1.6), testit, tibble",
-        "VignetteBuilder": "knitr",
-        "Encoding": "UTF-8",
-        "RoxygenNote": "7.3.2",
-        "NeedsCompilation": "no",
-        "Packaged": "2025-09-02 13:12:27 UTC; garrick",
-        "Author": "Yihui Xie [aut],\n  Joe Cheng [aut],\n  Xianying Tan [aut],\n  Garrick Aden-Buie [aut, cre] (ORCID:\n    <https://orcid.org/0000-0002-7111-0077>),\n  JJ Allaire [ctb],\n  Maximilian Girlich [ctb],\n  Greg Freedman Ellis [ctb],\n  Johannes Rauh [ctb],\n  SpryMedia Limited [ctb, cph] (DataTables in htmlwidgets/lib),\n  Brian Reavis [ctb, cph] (selectize.js in htmlwidgets/lib),\n  Leon Gersen [ctb, cph] (noUiSlider in htmlwidgets/lib),\n  Bartek Szopka [ctb, cph] (jquery.highlight.js in htmlwidgets/lib),\n  Alex Pickering [ctb],\n  William Holmes [ctb],\n  Mikko Marttila [ctb],\n  Andres Quintero [ctb],\n  Stéphane Laurent [ctb],\n  Posit Software, PBC [cph, fnd]",
-        "Maintainer": "Garrick Aden-Buie <garrick@posit.co>",
-        "Repository": "CRAN",
-        "Date/Publication": "2025-09-02 22:00:06 UTC",
-        "Built": "R 4.3.2; ; 2026-02-17 10:26:08 UTC; windows",
-        "RemoteType": "standard",
-        "RemotePkgRef": "DT",
-        "RemoteRef": "DT",
-        "RemoteRepos": "https://cran.rstudio.com",
-        "RemoteSha": "0.34.0"
-      }
-    },
     "MASS": {
       "Source": "CRAN",
       "Repository": "https://cran.rstudio.com",
@@ -634,32 +602,6 @@
         "Repository": "CRAN",
         "Date/Publication": "2022-09-29 16:20:24 UTC",
         "Built": "R 4.3.2; ; 2023-11-23 01:30:55 UTC; windows"
-      }
-    },
-    "crosstalk": {
-      "Source": "CRAN",
-      "Repository": "https://cran.rstudio.com",
-      "description": {
-        "Package": "crosstalk",
-        "Type": "Package",
-        "Title": "Inter-Widget Interactivity for HTML Widgets",
-        "Version": "1.2.1",
-        "Authors@R": "c(\n    person(\"Joe\", \"Cheng\", role = \"aut\", email = \"joe@posit.co\"),\n    person(\"Carson\", \"Sievert\", role = c(\"aut\", \"cre\"),\n    email = \"carson@posit.co\", comment = c(ORCID = \"0000-0002-4958-2844\")),\n    person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\")),\n    person(family = \"jQuery Foundation\", role = \"cph\",\n    comment = \"jQuery library and jQuery UI library\"),\n    person(family = \"jQuery contributors\", role = c(\"ctb\", \"cph\"),\n    comment = \"jQuery library; authors listed in inst/www/shared/jquery-AUTHORS.txt\"),\n    person(\"Mark\", \"Otto\", role = \"ctb\",\n    comment = \"Bootstrap library\"),\n    person(\"Jacob\", \"Thornton\", role = \"ctb\",\n    comment = \"Bootstrap library\"),\n    person(family = \"Bootstrap contributors\", role = \"ctb\",\n    comment = \"Bootstrap library\"),\n    person(family = \"Twitter, Inc\", role = \"cph\",\n    comment = \"Bootstrap library\"),\n    person(\"Brian\", \"Reavis\", role = c(\"ctb\", \"cph\"),\n    comment = \"selectize.js library\"),\n    person(\"Kristopher Michael\", \"Kowal\", role = c(\"ctb\", \"cph\"),\n    comment = \"es5-shim library\"),\n    person(family = \"es5-shim contributors\", role = c(\"ctb\", \"cph\"),\n    comment = \"es5-shim library\"),\n    person(\"Denis\", \"Ineshin\", role = c(\"ctb\", \"cph\"),\n    comment = \"ion.rangeSlider library\"),\n    person(\"Sami\", \"Samhuri\", role = c(\"ctb\", \"cph\"),\n    comment = \"Javascript strftime library\")\n    )",
-        "Description": "Provides building blocks for allowing HTML widgets to communicate\n    with each other, with Shiny or without (i.e. static .html files). Currently\n    supports linked brushing and filtering.",
-        "License": "MIT + file LICENSE",
-        "Imports": "htmltools (>= 0.3.6), jsonlite, lazyeval, R6",
-        "Suggests": "shiny, ggplot2, testthat (>= 2.1.0), sass, bslib",
-        "URL": "https://rstudio.github.io/crosstalk/,\nhttps://github.com/rstudio/crosstalk",
-        "BugReports": "https://github.com/rstudio/crosstalk/issues",
-        "RoxygenNote": "7.2.3",
-        "Encoding": "UTF-8",
-        "NeedsCompilation": "no",
-        "Packaged": "2023-11-22 16:29:50 UTC; cpsievert",
-        "Author": "Joe Cheng [aut],\n  Carson Sievert [aut, cre] (<https://orcid.org/0000-0002-4958-2844>),\n  Posit Software, PBC [cph, fnd],\n  jQuery Foundation [cph] (jQuery library and jQuery UI library),\n  jQuery contributors [ctb, cph] (jQuery library; authors listed in\n    inst/www/shared/jquery-AUTHORS.txt),\n  Mark Otto [ctb] (Bootstrap library),\n  Jacob Thornton [ctb] (Bootstrap library),\n  Bootstrap contributors [ctb] (Bootstrap library),\n  Twitter, Inc [cph] (Bootstrap library),\n  Brian Reavis [ctb, cph] (selectize.js library),\n  Kristopher Michael Kowal [ctb, cph] (es5-shim library),\n  es5-shim contributors [ctb, cph] (es5-shim library),\n  Denis Ineshin [ctb, cph] (ion.rangeSlider library),\n  Sami Samhuri [ctb, cph] (Javascript strftime library)",
-        "Maintainer": "Carson Sievert <carson@posit.co>",
-        "Repository": "CRAN",
-        "Date/Publication": "2023-11-23 08:50:07 UTC",
-        "Built": "R 4.3.2; ; 2023-11-24 10:16:10 UTC; windows"
       }
     },
     "curl": {
@@ -1506,31 +1448,6 @@
         "Repository": "CRAN",
         "Date/Publication": "2023-10-01 04:40:07 UTC",
         "Built": "R 4.3.2; x86_64-w64-mingw32; 2023-10-31 14:05:26 UTC; windows",
-        "Archs": "x64"
-      }
-    },
-    "lazyeval": {
-      "Source": "CRAN",
-      "Repository": "https://cran.rstudio.com",
-      "description": {
-        "Package": "lazyeval",
-        "Version": "0.2.2",
-        "Title": "Lazy (Non-Standard) Evaluation",
-        "Description": "An alternative approach to non-standard evaluation using\n    formulas. Provides a full implementation of LISP style 'quasiquotation',\n    making it easier to generate code with other code.",
-        "Authors@R": "c(\n    person(\"Hadley\", \"Wickham\", ,\"hadley@rstudio.com\", c(\"aut\", \"cre\")),\n    person(\"RStudio\", role = \"cph\")\n    )",
-        "License": "GPL-3",
-        "LazyData": "true",
-        "Depends": "R (>= 3.1.0)",
-        "Suggests": "knitr, rmarkdown (>= 0.2.65), testthat, covr",
-        "VignetteBuilder": "knitr",
-        "RoxygenNote": "6.1.1",
-        "NeedsCompilation": "yes",
-        "Packaged": "2019-03-15 14:18:01 UTC; lionel",
-        "Author": "Hadley Wickham [aut, cre],\n  RStudio [cph]",
-        "Maintainer": "Hadley Wickham <hadley@rstudio.com>",
-        "Repository": "CRAN",
-        "Date/Publication": "2019-03-15 17:50:07 UTC",
-        "Built": "R 4.3.2; x86_64-w64-mingw32; 2023-11-23 01:31:25 UTC; windows",
         "Archs": "x64"
       }
     },
@@ -2978,13 +2895,13 @@
   },
   "files": {
     "app.R": {
-      "checksum": "d225af0ac8a34b38fcb6d499a8002bf5"
+      "checksum": "5d35cbe907a6eea2fb5ff986c3a12d67"
     },
     "global.R": {
-      "checksum": "f7b8c85202520d4f9a712dd85622bbbf"
+      "checksum": "898a8f9aee6e8451fe21e4d6cd3c402b"
     },
     "inst/analytics/plot_akta_improved.R": {
-      "checksum": "5e619283a6b70909afd858cf3633bc40"
+      "checksum": "23d7cc5deb4a9a683c456dcfce6ea8ff"
     },
     "inst/analytics/softmax_bca_improved.R": {
       "checksum": "ce3de6991ea98bdbe1b602c7da978edb"
@@ -2992,32 +2909,104 @@
     "inst/analytics/tm_analysis_functions.R": {
       "checksum": "1c55dbde02184f972ae49de0bc3caaf6"
     },
+    "inst/examples/akta_example.csv.gz": {
+      "checksum": "0b5ec44e88872b52ba348bcf9a3a2678"
+    },
+    "inst/examples/bca_example.xls": {
+      "checksum": "c531e39fea18be0516d7002352c43da1"
+    },
+    "inst/examples/cpm_contour_dfdt_example.csv": {
+      "checksum": "a3830f869c14b7e46c07ae758427773f"
+    },
+    "inst/examples/cpm_contour_tm_example.csv": {
+      "checksum": "613250277a9552d3f7c64a828e8bf2c4"
+    },
+    "inst/examples/cpm_qc_multi_example.csv": {
+      "checksum": "70ae471d4469d2cb04eabd9bd5c884e4"
+    },
+    "inst/examples/cpm_qc_simple_example.csv": {
+      "checksum": "8220b19a0bced1ce2883eba61ef2de61"
+    },
+    "inst/examples/gel_example.tif": {
+      "checksum": "56dfeeade6828853c4837388580bb96e"
+    },
+    "inst/examples/ucp1/Conductance_Example_CapacityCal.csv": {
+      "checksum": "a12117f826faa714171adf551d739198"
+    },
+    "inst/examples/ucp1/Conductance_Example_ProtonCal.csv": {
+      "checksum": "49d055ca103f96a0f4d242292a6628ed"
+    },
+    "inst/examples/ucp1/Conductance_Example_RawData_Sample1.csv": {
+      "checksum": "0e4f32536df0265fc3b05ed95cc3601b"
+    },
+    "inst/examples/ucp1/Conductance_Example_RawData_Sample10.csv": {
+      "checksum": "5a23c80ca1d6badd27fa3aca1f4f9d1e"
+    },
+    "inst/examples/ucp1/Conductance_Example_RawData_Sample11.csv": {
+      "checksum": "c9dc78fb2c6ae41d2c4e972f9a12b9ca"
+    },
+    "inst/examples/ucp1/Conductance_Example_RawData_Sample12.csv": {
+      "checksum": "9a611cc8bc675e255c17a208268e7420"
+    },
+    "inst/examples/ucp1/Conductance_Example_RawData_Sample13.csv": {
+      "checksum": "2aa90e166bd18a5b8a5c22417dca8988"
+    },
+    "inst/examples/ucp1/Conductance_Example_RawData_Sample14.csv": {
+      "checksum": "c3b91a09ecf521ea0633e22a7418266b"
+    },
+    "inst/examples/ucp1/Conductance_Example_RawData_Sample2.csv": {
+      "checksum": "7b6a65574fba4c9b0d347c36323326ab"
+    },
+    "inst/examples/ucp1/Conductance_Example_RawData_Sample3.csv": {
+      "checksum": "685c4f2bc9cf2cbff7b9145011f0414f"
+    },
+    "inst/examples/ucp1/Conductance_Example_RawData_Sample4.csv": {
+      "checksum": "5e9aa549c3b6d328add308df81eff9f3"
+    },
+    "inst/examples/ucp1/Conductance_Example_RawData_Sample5.csv": {
+      "checksum": "a7ff5a7f4fa4d347eeefa1c66ada858a"
+    },
+    "inst/examples/ucp1/Conductance_Example_RawData_Sample6.csv": {
+      "checksum": "37e53251b7cff9eed9a92dfa89f2912a"
+    },
+    "inst/examples/ucp1/Conductance_Example_RawData_Sample7.csv": {
+      "checksum": "37142e35a33cc69fdc1a014b6d929151"
+    },
+    "inst/examples/ucp1/Conductance_Example_RawData_Sample8.csv": {
+      "checksum": "06fd10cde73a905c29d498347cab3191"
+    },
+    "inst/examples/ucp1/Conductance_Example_RawData_Sample9.csv": {
+      "checksum": "4c603c7a6b9d762edaa40197990ce857"
+    },
+    "inst/examples/western_example.jpg": {
+      "checksum": "ca2b9ed76f7c2c5093af7e4469b4b90f"
+    },
+    "MIGRATION_GUIDE.md": {
+      "checksum": "70b241e4af133e934558ea5ffc9a9e54"
+    },
     "R/mod_akta.R": {
-      "checksum": "dd3a97cb521bf12d31558970715a82c6"
+      "checksum": "bf560e3f29e865a2a5e3e9bc9e5b8c3d"
     },
     "R/mod_bca.R": {
-      "checksum": "59dbd201daad6d15c3c58ddfd66d50c1"
+      "checksum": "a63eade5e48c7b7c5511ba37922506ee"
     },
     "R/mod_cpm.R": {
-      "checksum": "08b4e404d3cebe79659c0c8d3c206c74"
+      "checksum": "165f7627623d949dad6a4ad728c5edd0"
     },
     "R/mod_cpm_contour.R": {
-      "checksum": "4e86739fbdb69abeb256b3f0b9c3f021"
+      "checksum": "925ca0a811cd5573a4b11950663af072"
     },
     "R/mod_cpm_qc.R": {
-      "checksum": "22025bbb5d990fa5d60fec17be1c7c7a"
-    },
-    "R/mod_export.R": {
-      "checksum": "06689afead7edb0d73a9822d8bb981bf"
+      "checksum": "9ee25c3dea6553efd434f975774817a3"
     },
     "R/mod_gel.R": {
-      "checksum": "83e1cb9954ffe996b065b737dea76538"
+      "checksum": "26e35caee7d09ed43ca8ac1c8c3979d7"
     },
     "R/mod_home.R": {
       "checksum": "39c64d1679c8685b20a30fbef2de5e17"
     },
     "R/mod_ucp1.R": {
-      "checksum": "ab694721d91eac5e66052ae32596bf71"
+      "checksum": "cb00785ddfdd7d74440797a999493d79"
     },
     "R/utils_theme.R": {
       "checksum": "b282aa0b9d2b4c1d82786baa411d842e"
@@ -3026,7 +3015,7 @@
       "checksum": "c798e196e1c3fb9ab2089e1df8a1f5f9"
     },
     "www/custom.css": {
-      "checksum": "fee1820779e04ce282c20c1772026603"
+      "checksum": "f034c66d1b2e96d72252cbc9986c249f"
     },
     "www/custom.js": {
       "checksum": "8070ba49f434d3b6ba8306b08d2ef7ef"

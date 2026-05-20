@@ -30,7 +30,7 @@ ucp1_ui <- function(id) {
   ns <- shiny::NS(id)
 
   shiny::tagList(
-    shiny::div(class = "clear-button-container",
+    shiny::div(style = "display: none;",
       shiny::actionButton(ns("clear"), "\U0001f504  Clear All Data", class = "btn-clear")
     ),
 
@@ -39,139 +39,158 @@ ucp1_ui <- function(id) {
 
     shiny::div(id = ns("content_section"),
 
-      # ---- Row 1: Proton calibration + curve --------------------------
-      shiny::fluidRow(
-        shiny::column(4,
-          lab_card(
-            step_title(1, "Upload Proton Calibration"),
-            shiny::fileInput(ns("cal_file"), NULL, accept = ".csv",
-                             buttonLabel = "Browse\u2026",
-                             placeholder = "Proton calibration CSV"),
-            shiny::uiOutput(ns("cal_status"))
+      shiny::div(class = "sticky-tool",
+        shiny::fluidRow(
+          # =============================================================
+          # LEFT COLUMN: workflow (scrolls independently)
+          # =============================================================
+          shiny::column(4,
+            shiny::div(class = "workflow-col",
+              lab_card(
+                step_title(1, "Upload Proton Calibration"),
+                shiny::fileInput(ns("cal_file"), NULL, accept = ".csv",
+                                 buttonLabel = "Browse\u2026",
+                                 placeholder = "Proton calibration CSV"),
+                shiny::uiOutput(ns("cal_status"))
+              ),
+              lab_card(
+                step_title(2, "Upload Capacity Calibration"),
+                shiny::fileInput(ns("cap_file"), NULL, accept = ".csv",
+                                 buttonLabel = "Browse\u2026",
+                                 placeholder = "Capacity calibration CSV"),
+                shiny::uiOutput(ns("cap_status"))
+              ),
+              lab_card(
+                step_title(3, "Upload Raw Sample Data"),
+                shiny::fileInput(ns("raw_files"), NULL,
+                                 accept = ".csv", multiple = TRUE,
+                                 buttonLabel = "Browse\u2026",
+                                 placeholder = "Select 12-18 raw trace CSV files"),
+                shiny::uiOutput(ns("raw_status"))
+              ),
+              lab_card(
+                step_title(4, "Plot Settings"),
+                shiny::numericInput(ns("line_width"), "Line width",
+                                    value = 1, min = 0.5, max = 3, step = 0.25),
+                shiny::checkboxInput(ns("show_titles"), "Show plot titles", value = TRUE),
+                shiny::conditionalPanel(
+                  condition = sprintf("input['%s'] == true", ns("show_titles")),
+                  shiny::textInput(ns("proton_trace_title"),
+                    "Proton calibration trace title",
+                    placeholder = "Default: Intensity (a.u.)"),
+                  shiny::textInput(ns("proton_curve_title"),
+                    "Proton calibration curve title",
+                    placeholder = "Default: FU/Proton Calibration Curve"),
+                  shiny::textInput(ns("capacity_trace_title"),
+                    "Capacity calibration trace title",
+                    placeholder = "Default: Intensity (a.u.)"),
+                  shiny::textInput(ns("capacity_curve_title"),
+                    "Capacity calibration curve title",
+                    placeholder = "Default: Internal Volume Calibration")
+                )
+              ),
+              lab_card(
+                step_title(5, "Proton Calibration Plateaus"),
+                shiny::uiOutput(ns("plateau_info")),
+                shiny::br(),
+                shiny::div(style = "max-height: 240px; overflow-y: auto;",
+                  shiny::tableOutput(ns("plateau_table"))),
+                shiny::br(),
+                shiny::uiOutput(ns("plateau_selector"))
+              ),
+              lab_card(
+                step_title(6, "Capacity Calibration Plateaus"),
+                shiny::uiOutput(ns("cap_plateau_info")),
+                shiny::br(),
+                shiny::div(style = "max-height: 240px; overflow-y: auto;",
+                  shiny::tableOutput(ns("cap_plateau_table"))),
+                shiny::br(),
+                shiny::uiOutput(ns("cap_plateau_selector"))
+              ),
+              # Export box at the bottom of the workflow column - mirrors
+              # the pattern used by every other tool (Analyse / Export
+              # as the final step). The same export button as before,
+              # just relocated from the full-width row at the bottom.
+              lab_card(
+                step_title(7, "Export Complete Analysis"),
+                shiny::uiOutput(ns("export_status")),
+                shiny::br(),
+                shiny::uiOutput(ns("export_button"))
+              )
+            )  # close workflow-col
           ),
-          lab_card(
-            step_title(2, "Upload Capacity Calibration"),
-            shiny::fileInput(ns("cap_file"), NULL, accept = ".csv",
-                             buttonLabel = "Browse\u2026",
-                             placeholder = "Capacity calibration CSV"),
-            shiny::uiOutput(ns("cap_status"))
-          ),
-          lab_card(
-            step_title(3, "Plot Settings"),
-            shiny::numericInput(ns("line_width"), "Line width",
-                                value = 1, min = 0.5, max = 3, step = 0.25),
-            shiny::checkboxInput(ns("show_titles"), "Show plot titles", value = TRUE),
-            shiny::conditionalPanel(
-              condition = sprintf("input['%s'] == true", ns("show_titles")),
-              shiny::textInput(ns("proton_trace_title"),
-                "Proton calibration trace title",
-                placeholder = "Default: Intensity (a.u.)"),
-              shiny::textInput(ns("proton_curve_title"),
-                "Proton calibration curve title",
-                placeholder = "Default: FU/Proton Calibration Curve"),
-              shiny::textInput(ns("capacity_trace_title"),
-                "Capacity calibration trace title",
-                placeholder = "Default: Intensity (a.u.)"),
-              shiny::textInput(ns("capacity_curve_title"),
-                "Capacity calibration curve title",
-                placeholder = "Default: Internal Volume Calibration")
-            )
-          ),
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f4ca  Detected Plateaus"),
-            shiny::uiOutput(ns("plateau_info")),
-            shiny::br(),
-            shiny::div(style = "max-height: 300px; overflow-y: auto;",
-              shiny::tableOutput(ns("plateau_table"))),
-            shiny::br(),
-            shiny::uiOutput(ns("plateau_selector"))
-          )
-        ),
-        shiny::column(8,
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f4c8  Proton Calibration Trace"),
-            shiny::uiOutput(ns("cal_placeholder")),
-            shiny::plotOutput(ns("cal_plot"), height = "320px"),
-            shiny::br(),
-            shiny::uiOutput(ns("cal_download"))
-          ),
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f4c9  FU/Proton Calibration Curve"),
-            shiny::uiOutput(ns("calibcurve_ui"))
-          )
-        )
-      ),
 
-      # ---- Row 2: Capacity plateaus + curve ---------------------------
-      shiny::fluidRow(
-        shiny::column(4,
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f4ca  Detected Plateaus (Capacity)"),
-            shiny::uiOutput(ns("cap_plateau_info")),
-            shiny::br(),
-            shiny::div(style = "max-height: 300px; overflow-y: auto;",
-              shiny::tableOutput(ns("cap_plateau_table"))),
-            shiny::br(),
-            shiny::uiOutput(ns("cap_plateau_selector"))
-          )
-        ),
-        shiny::column(8,
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f4c8  Capacity Calibration Trace"),
-            shiny::uiOutput(ns("cap_placeholder")),
-            shiny::plotOutput(ns("cap_plot"), height = "320px"),
-            shiny::br(),
-            shiny::uiOutput(ns("cap_download"))
-          ),
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f4c9  Internal Volume Calibration Curve"),
-            shiny::uiOutput(ns("cap_calibcurve_ui"))
-          )
-        )
-      ),
-
-      # ---- Row 3: Raw data --------------------------------------------
-      shiny::fluidRow(style = "margin-top: 0 !important;",
-        shiny::column(12,
-          lab_card(
-            step_title(4, "Upload Raw Sample Data"),
-            shiny::fileInput(ns("raw_files"), NULL,
-                             accept = ".csv", multiple = TRUE,
-                             buttonLabel = "Browse\u2026",
-                             placeholder = "Select 12-18 raw trace CSV files"),
-            shiny::uiOutput(ns("raw_status")),
-            shiny::br(),
-            shiny::div(style = "max-height: 400px; overflow-y: auto; overflow-x: auto;",
-              shiny::tableOutput(ns("raw_table"))),
-            shiny::br(),
-            shiny::uiOutput(ns("raw_download"))
-          )
-        )
-      ),
-
-      # ---- Row 4: Processed data --------------------------------------
-      shiny::fluidRow(style = "margin-top: 0 !important;",
-        shiny::column(12,
-          lab_card(
-            step_title(5, "Processed Data ([H+] in mM)"),
-            shiny::uiOutput(ns("processed_status")),
-            shiny::br(),
-            shiny::div(style = "max-height: 400px; overflow-y: auto; overflow-x: auto;",
-              shiny::tableOutput(ns("processed_table"))),
-            shiny::br(),
-            shiny::uiOutput(ns("processed_download"))
-          )
-        )
-      ),
-
-      # ---- Row 5: Export ----------------------------------------------
-      shiny::fluidRow(
-        shiny::column(12,
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f4e6  Export Complete Analysis"),
-            shiny::uiOutput(ns("export_status")),
-            shiny::br(),
-            shiny::uiOutput(ns("export_button"))
+          # =============================================================
+          # RIGHT COLUMN: previews (sticky)
+          # =============================================================
+          # One continuous column. Calibration plots are visible by
+          # default because they're useful visual checks of the curves.
+          # Raw and Processed data tables are hidden behind toggle
+          # buttons because they're rarely needed in the app itself -
+          # they're for sanity-checking that the right files loaded
+          # before exporting. Full data lives in the exported Excel.
+          shiny::column(8,
+            shiny::div(class = "preview-col",
+              # ---- Proton calibration ---------------------------------
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f4c8  Proton Calibration Trace"),
+                shiny::uiOutput(ns("cal_placeholder")),
+                shiny::plotOutput(ns("cal_plot"), height = "300px"),
+                shiny::br(),
+                shiny::uiOutput(ns("cal_download"))
+              ),
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f4c9  FU/Proton Calibration Curve"),
+                shiny::uiOutput(ns("calibcurve_ui"))
+              ),
+              # ---- Capacity calibration -------------------------------
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f4c8  Capacity Calibration Trace"),
+                shiny::uiOutput(ns("cap_placeholder")),
+                shiny::plotOutput(ns("cap_plot"), height = "300px"),
+                shiny::br(),
+                shiny::uiOutput(ns("cap_download"))
+              ),
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f4c9  Internal Volume Calibration Curve"),
+                shiny::uiOutput(ns("cap_calibcurve_ui"))
+              ),
+              # ---- Raw data (collapsed by default) --------------------
+              # Same toggle pattern as AKTA's "Advanced Plot Settings":
+              # adv-toggle button + a hidden div that slideToggles open.
+              lab_card(
+                shiny::tags$button(
+                  shiny::HTML("\U0001f4cb  Show / Hide Raw Sample Data"),
+                  class = "adv-toggle",
+                  onclick = sprintf("$('#%s').slideToggle(200)", ns("raw_panel"))),
+                shiny::div(id = ns("raw_panel"), style = "display:none;",
+                  shiny::br(),
+                  shiny::div(style = "max-height: 400px; overflow-y: auto; overflow-x: auto;",
+                    shiny::tableOutput(ns("raw_table"))),
+                  shiny::br(),
+                  shiny::uiOutput(ns("raw_download"))
+                )
+              ),
+              # ---- Processed data (collapsed by default) --------------
+              lab_card(
+                shiny::div(style = "display:flex;align-items:center;justify-content:space-between;",
+                  shiny::div(style = "flex:1;",
+                    shiny::uiOutput(ns("processed_status")))
+                ),
+                shiny::br(),
+                shiny::tags$button(
+                  shiny::HTML("\U0001f4cb  Show / Hide Processed Data ([H+] in mM)"),
+                  class = "adv-toggle",
+                  onclick = sprintf("$('#%s').slideToggle(200)", ns("processed_panel"))),
+                shiny::div(id = ns("processed_panel"), style = "display:none;",
+                  shiny::br(),
+                  shiny::div(style = "max-height: 400px; overflow-y: auto; overflow-x: auto;",
+                    shiny::tableOutput(ns("processed_table"))),
+                  shiny::br(),
+                  shiny::uiOutput(ns("processed_download"))
+                )
+              )
+            )  # close preview-col
           )
         )
       )
@@ -203,6 +222,8 @@ ucp1_server <- function(id) {
     # ---- Clear handler --------------------------------------------------
     # Uses the same "nuclear option" as the original: hide the entire
     # content div via JS so reactives can't re-fire during teardown.
+    # After clearing, reload the bundled examples so the preview is
+    # never empty - same Clear semantics as the other migrated tools.
     shiny::observeEvent(input$clear, {
       shinyjs::runjs(sprintf(
         "document.getElementById('%s').style.display = 'none';",
@@ -225,8 +246,38 @@ ucp1_server <- function(id) {
       shinyjs::runjs(sprintf(
         "document.getElementById('%s').style.display = 'block';",
         ns("content_section")))
+
+      # Reload examples after clearing
+      tryCatch(.load_example_data(), error = function(e)
+        message("[UCP1] example reload failed: ", conditionMessage(e)))
+
       shiny::showNotification("UCP1 data cleared", type = "message", duration = 2)
     }, ignoreInit = TRUE, priority = 1000)
+
+
+    # ---- Session-start example loader ----------------------------------
+    # Same one-shot observe() + self-destruct pattern used in every
+    # other migrated tool. Loads all three data sources (proton cal,
+    # capacity cal, raw samples) so the previews populate immediately
+    # when the user first opens the tab.
+    #
+    # The bundled examples live in inst/examples/ucp1/ - a subdirectory
+    # because there are 16 files for UCP1 (1 proton cal + 1 capacity
+    # cal + 14 raw sample CSVs), and keeping them in the top-level
+    # examples/ directory would clutter it. Helper .ucp1_example_data()
+    # returns a list with the three pieces.
+    .load_example_data <- function() {
+      ex <- .ucp1_example_data()
+      if (is.null(ex)) return(invisible())
+      if (!is.null(ex$cal_data))  cal_data(ex$cal_data)
+      if (!is.null(ex$cap_data))  cap_data(ex$cap_data)
+      if (!is.null(ex$raw_data))  raw_data(ex$raw_data)
+    }
+    .example_loader_obs <- shiny::observe({
+      .example_loader_obs$destroy()
+      tryCatch(.load_example_data(), error = function(e)
+        message("[UCP1] example load failed: ", conditionMessage(e)))
+    })
 
 
     # =====================================================================
@@ -727,6 +778,14 @@ ucp1_server <- function(id) {
     }, striped = TRUE, hover = TRUE, bordered = TRUE, spacing = "s",
        width = "100%", align = "c", digits = 2)
 
+    # Keep this output alive even when its containing div is display:none.
+    # The raw data table starts collapsed (slideToggle hides it via CSS),
+    # and Shiny's default behaviour is to suspend hidden outputs - which
+    # means the table never renders when the user expands the panel.
+    # Suspending was the correct default for the old always-visible
+    # layout but now we need it to render preemptively.
+    shiny::outputOptions(output, "raw_table", suspendWhenHidden = FALSE)
+
     output$raw_download <- shiny::renderUI({
       shiny::req(!clearing(), raw_data())
       d <- raw_data()
@@ -782,6 +841,10 @@ ucp1_server <- function(id) {
       proc
     }, striped = TRUE, hover = TRUE, bordered = TRUE, spacing = "s",
        width = "100%", align = "c", digits = 4)
+
+    # Same suspension override as for raw_table - this table is also
+    # inside a collapsed-by-default panel.
+    shiny::outputOptions(output, "processed_table", suspendWhenHidden = FALSE)
 
     output$processed_download <- shiny::renderUI({
       shiny::req(!clearing(), processed_data())
@@ -932,6 +995,22 @@ ucp1_server <- function(id) {
 # Combine multiple raw-sample CSVs into a single wide table.
 # Sample name is the text after the final underscore in each filename.
 .ucp1_combine_raw_files <- function(files) {
+  # Sort files by trailing number in the sample-label portion of the
+  # filename so the output columns come out in natural order
+  # (Sample1, Sample2, ..., Sample10, Sample11) rather than alphabetical
+  # (Sample1, Sample10, Sample11, ..., Sample2). The sort is stable for
+  # files without trailing numbers so user uploads with arbitrary names
+  # keep their original Browse-dialog order.
+  sample_labels <- vapply(files$name, function(nm) {
+    fname_no_ext <- sub("\\.csv$", "", nm, ignore.case = TRUE)
+    parts        <- strsplit(fname_no_ext, "_")[[1]]
+    parts[length(parts)]
+  }, character(1))
+  trailing_num <- suppressWarnings(as.integer(
+    sub(".*?([0-9]+)$", "\\1", sample_labels)))
+  files <- files[order(trailing_num, seq_along(trailing_num),
+                       na.last = TRUE), , drop = FALSE]
+
   n <- nrow(files)
   per_file <- lapply(seq_len(n), function(i) {
     df <- .ucp1_read_trace_csv(files$datapath[i])
@@ -1337,4 +1416,74 @@ ucp1_server <- function(id) {
 
   openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
   unlink(c1); unlink(c2); unlink(c3); unlink(c4)
+}
+
+
+# ---- Example data loader --------------------------------------------------
+# UCP1 needs 16 files for a complete example (1 proton cal + 1 capacity
+# cal + 14 raw sample traces). They're bundled in inst/examples/ucp1/ as
+# a subdirectory so the top-level examples/ doesn't get cluttered.
+#
+# The loader reads all 16 files using the same parsing helpers the upload
+# observers use (.ucp1_read_trace_csv + .ucp1_combine_raw_files), so the
+# example path and the upload path produce byte-identical results from
+# the same source data. Cached after first call.
+.ucp1_example_cache <- new.env(parent = emptyenv())
+
+.ucp1_example_data <- function() {
+  # Return cached result if we've already loaded it this session
+  if (!is.null(.ucp1_example_cache$loaded)) {
+    return(list(cal_data = .ucp1_example_cache$cal,
+                cap_data = .ucp1_example_cache$cap,
+                raw_data = .ucp1_example_cache$raw))
+  }
+
+  # Resolve the example directory the defensive way
+  app_dir_local <- if (exists("app_dir", envir = globalenv())) {
+    get("app_dir", envir = globalenv())
+  } else getwd()
+  candidates <- unique(c(
+    file.path(app_dir_local, "inst", "examples", "ucp1"),
+    file.path(getwd(),       "inst", "examples", "ucp1"),
+    file.path("inst", "examples", "ucp1")
+  ))
+  dir_path <- candidates[dir.exists(candidates)][1]
+  if (is.na(dir_path)) return(NULL)
+
+  # List files; identify the proton cal, capacity cal, and the rest
+  all_files <- list.files(dir_path, pattern = "\\.csv$", full.names = TRUE)
+  if (length(all_files) == 0) return(NULL)
+
+  cal_path <- grep("ProtonCal", all_files, value = TRUE)[1]
+  cap_path <- grep("CapacityCal", all_files, value = TRUE)[1]
+  raw_paths <- setdiff(all_files, c(cal_path, cap_path))
+  if (is.na(cal_path) || is.na(cap_path) || length(raw_paths) == 0)
+    return(NULL)
+
+  tryCatch({
+    # Calibrations: just trace dataframes
+    cal_df <- .ucp1_read_trace_csv(cal_path)
+    cap_df <- .ucp1_read_trace_csv(cap_path)
+
+    # Raw samples: need a synthetic fileInput-shaped data.frame so the
+    # existing .ucp1_combine_raw_files() helper can consume it unchanged.
+    # That helper extracts sample names from the filename's last "_"
+    # suffix, so we keep the original filenames.
+    raw_files_df <- data.frame(
+      name     = basename(raw_paths),
+      datapath = raw_paths,
+      stringsAsFactors = FALSE
+    )
+    raw_df <- .ucp1_combine_raw_files(raw_files_df)
+
+    .ucp1_example_cache$cal     <- cal_df
+    .ucp1_example_cache$cap     <- cap_df
+    .ucp1_example_cache$raw     <- raw_df
+    .ucp1_example_cache$loaded  <- TRUE
+
+    list(cal_data = cal_df, cap_data = cap_df, raw_data = raw_df)
+  }, error = function(e) {
+    message("[UCP1] example load error: ", conditionMessage(e))
+    NULL
+  })
 }

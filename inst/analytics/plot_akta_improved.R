@@ -22,7 +22,11 @@ library(scales)
 #'
 #' @param files Character vector of CSV file paths from UNICORN 7
 #' @param volume_range Numeric vector of length 2: c(min, max) volume in mL (NULL for auto)
-#' @param show_fractions Logical: display AKTA fraction labels
+#' @param show_fractions Logical: display fraction marker lines (dashed verticals)
+#' @param show_fraction_labels Logical: display fraction text labels above the
+#'   markers. Independent of `show_fractions` so the user can keep the dashed
+#'   lines as positional references while hiding labels that overlap on runs
+#'   with very small elution fractions.
 #' @param show_conductance Logical: show conductance trace (from first file)
 #' @param show_uv260 Logical: show UV 260nm trace (from first file)
 #' @param show_percent_b Logical: show concentration B trace (from first file)
@@ -43,6 +47,7 @@ plot_akta_improved <- function(
     files,
     volume_range = NULL,
     show_fractions = TRUE,
+    show_fraction_labels = TRUE,
     show_conductance = FALSE,
     show_uv260 = FALSE,
     show_percent_b = FALSE,
@@ -556,17 +561,22 @@ plot_akta_improved <- function(
                           size = 0.4,
                           alpha = 0.7)
       
-      # Add fraction labels
-      label_y <- uv_min + (uv_max - uv_min) * 0.05
-      p <- p + geom_text(data = label_positions,
-                         aes(x = volume, y = label_y, label = label),
-                         angle = 90,
-                         size = 3.5,
-                         hjust = 0,
-                         vjust = 0.5,
-                         color = "gray20",
-                         inherit.aes = FALSE,
-                         fontface = "bold")
+      # Add fraction labels. Gated separately from the dashed lines so
+      # the user can keep the markers visible (useful as positional
+      # references) while turning off the text - which can become an
+      # overlapping blur on runs with very small elution fractions.
+      if (show_fraction_labels) {
+        label_y <- uv_min + (uv_max - uv_min) * 0.05
+        p <- p + geom_text(data = label_positions,
+                           aes(x = volume, y = label_y, label = label),
+                           angle = 90,
+                           size = 3.5,
+                           hjust = 0,
+                           vjust = 0.5,
+                           color = "gray20",
+                           inherit.aes = FALSE,
+                           fontface = "bold")
+      }
     }
   }
   

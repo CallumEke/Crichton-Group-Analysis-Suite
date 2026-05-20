@@ -39,71 +39,75 @@ bca_ui <- function(id) {
 
   shiny::tagList(
     # Clear-all button (top right)
-    shiny::div(class = "clear-button-container",
+    shiny::div(style = "display: none;",
       shiny::actionButton(ns("clear"), "\U0001f504  Clear All Data", class = "btn-clear")
     ),
 
-    shiny::fluidRow(
-      # ----- Left column: controls (1-4) ----------------------------------
-      shiny::column(4,
-        lab_card(
-          step_title(1, "Upload Data File"),
-          shiny::fileInput(ns("file"), NULL,
-                           accept = c(".xls", ".xlsx", ".csv", ".txt"),
-                           buttonLabel = "Browse\u2026",
-                           placeholder = "SoftMax Pro export"),
-          shiny::uiOutput(ns("file_status"))
+    shiny::div(class = "sticky-tool",
+      shiny::fluidRow(
+        # ----- Left column: controls (1-4) --------------------------------
+        # `workflow-col` (in custom.css) gives this column its own scroll
+        # so the preview on the right can stay sticky.
+        shiny::column(4,
+          shiny::div(class = "workflow-col",
+            lab_card(
+              step_title(1, "Upload Data File"),
+              shiny::fileInput(ns("file"), NULL,
+                               accept = c(".xls", ".xlsx", ".csv", ".txt"),
+                               buttonLabel = "Browse\u2026",
+                               placeholder = "SoftMax Pro export"),
+              shiny::uiOutput(ns("file_status"))
+            ),
+
+            lab_card(
+              step_title(2, "Concentration Source"),
+              info_box("Use Manual if multiple samples share one plate."),
+              shiny::div(class = "mode-pills",
+                shiny::radioButtons(ns("mode"), NULL,
+                  choices = c("Automatic (from file)" = "auto",
+                              "Manual entry"          = "manual"),
+                  selected = "auto", inline = TRUE)
+              ),
+              shiny::conditionalPanel(
+                condition = sprintf("input['%s'] == 'manual'", ns("mode")),
+                shiny::br(),
+                shiny::numericInput(ns("manual_conc"),
+                                    "Protein concentration (mg/mL)",
+                                    value = NULL, min = 0, step = 0.01)
+              )
+            ),
+
+            lab_card(
+              step_title(3, "Parameters"),
+              shiny::numericInput(ns("volume"),  "Sample volume (mL)", value = 1.0, min = 0.001, step = 0.1),
+              shiny::textInput(ns("title"),     "Result table title", value = "BCA Assay Protein Yield Summary"),
+              shiny::numericInput(ns("digits"), "Decimal places",     value = 2, min = 1, max = 4)
+            ),
+
+            lab_card(
+              step_title(4, "Analyse"),
+              shiny::actionButton(ns("run"), "\u25b6  Run Analysis", class = "btn-run"),
+              shiny::br(), shiny::br(),
+              shiny::uiOutput(ns("download_buttons"))
+            )
+          )  # close workflow-col
         ),
 
-        lab_card(
-          step_title(2, "Concentration Source"),
-          info_box("Use Manual if multiple samples share one plate."),
-          shiny::div(class = "mode-pills",
-            shiny::radioButtons(ns("mode"), NULL,
-              choices = c("Automatic (from file)" = "auto",
-                          "Manual entry"          = "manual"),
-              selected = "auto", inline = TRUE)
-          ),
-          shiny::conditionalPanel(
-            condition = sprintf("input['%s'] == 'manual'", ns("mode")),
-            shiny::br(),
-            shiny::numericInput(ns("manual_conc"),
-                                "Protein concentration (mg/mL)",
-                                value = NULL, min = 0, step = 0.01)
+        # ----- Right column: results (sticky) -----------------------------
+        # The Results table card was removed - all values shown in the
+        # badge row (Concentration / Total Yield / R^2) plus the standard
+        # curve. PNG/CSV exports of the table still work via the
+        # download buttons - those build the table from bca_results()
+        # directly, not from any rendered DT widget.
+        shiny::column(8,
+          shiny::div(class = "preview-col",
+            shiny::uiOutput(ns("result_badges")),
+            lab_card(
+              shiny::div(class = "lab-card-title", "\U0001f4c8  Standard Curve"),
+              shiny::uiOutput(ns("curve_placeholder")),
+              shiny::plotOutput(ns("curve_plot"), height = "360px")
+            )
           )
-        ),
-
-        lab_card(
-          step_title(3, "Parameters"),
-          shiny::numericInput(ns("volume"),  "Sample volume (mL)", value = 1.0, min = 0.001, step = 0.1),
-          shiny::textInput(ns("title"),     "Result table title", value = "BCA Assay Protein Yield Summary"),
-          shiny::numericInput(ns("digits"), "Decimal places",     value = 2, min = 1, max = 4)
-        ),
-
-        lab_card(
-          step_title(4, "Analyse"),
-          shiny::actionButton(ns("run"), "\u25b6  Run Analysis", class = "btn-run"),
-          shiny::br(), shiny::br(),
-          shiny::uiOutput(ns("download_buttons"))
-        )
-      ),
-
-      # ----- Right column: results ----------------------------------------
-      shiny::column(8,
-        shiny::uiOutput(ns("result_badges")),
-        lab_card(
-          shiny::div(class = "lab-card-title", "\U0001f4c8  Standard Curve"),
-          shiny::uiOutput(ns("curve_placeholder")),
-          shiny::plotOutput(ns("curve_plot"), height = "360px")
-        ),
-        lab_card(
-          shiny::div(class = "lab-card-title", "\U0001f4ca  Results"),
-          DT::DTOutput(ns("results_table"))
-        ),
-        lab_card(
-          shiny::div(class = "lab-card-title", "\U0001f551  Session History"),
-          shiny::uiOutput(ns("history_ui")),
-          shiny::uiOutput(ns("history_dl"))
         )
       )
     )
@@ -125,34 +129,60 @@ bca_server <- function(id) {
     # ---- State -----------------------------------------------------------
     bca_data    <- shiny::reactiveVal(NULL)
     bca_results <- shiny::reactiveVal(NULL)
-    bca_history <- shiny::reactiveVal(list())
 
-    # ---- Clear -----------------------------------------------------------
+    # current_file mirrors AKTA's current_files pattern: a single source
+    # of truth for "which file are we analysing?" with shape matching
+    # what shiny::fileInput returns:
+    #   data.frame(name, datapath, ...) with a single row.
+    # Populated from two sources: user upload (input$file) or the bundled
+    # example on session start.
+    current_file <- shiny::reactiveVal(NULL)
+
+    # ---- Internal: clear all derived state -----------------------------
+    .clear_state <- function(reset_inputs = TRUE) {
+      bca_data(NULL); bca_results(NULL)
+      if (reset_inputs) {
+        for (i in c("mode", "manual_conc", "volume", "title", "digits"))
+          shinyjs::reset(i)
+      }
+    }
+
+    # ---- Clear button (still in DOM, fired by global navbar Clear) -----
     shiny::observeEvent(input$clear, {
-      bca_data(NULL); bca_results(NULL); bca_history(list())
-      shinyjs::reset("file")
-      shinyjs::reset("mode")
-      shinyjs::reset("manual_conc")
-      shinyjs::reset("volume")
-      shinyjs::reset("title")
-      shinyjs::reset("digits")
+      current_file(NULL)
+      .clear_state()
+      # Reload the bundled example so the preview is never empty after
+      # clearing. Same pattern as AKTA's Clear behaviour.
+      tryCatch(.load_example_file(), error = function(e) NULL)
       shiny::showNotification("BCA data cleared", type = "message", duration = 2)
     })
 
-    # ---- File upload -----------------------------------------------------
+    # ---- File upload: route into current_file, then run -----------------
+    # New upload = fresh dataset. Wipe derived state first (results,
+    # title etc) so we don't carry stale numbers across, then set the
+    # file and trigger analysis automatically. User can still hit
+    # "Run Analysis" later to re-run with different volume/mode/etc.
     shiny::observeEvent(input$file, {
-      shiny::req(input$file)
-      bca_results(NULL)
+      .clear_state()
+      current_file(input$file)
+    }, ignoreInit = TRUE)
+
+    # When current_file changes (from upload or example), parse it and
+    # populate bca_data(). Doing this in a dedicated observer keeps the
+    # upload-vs-example paths sharing exactly the same parse logic.
+    shiny::observeEvent(current_file(), {
+      cf <- current_file()
+      shiny::req(cf)
       tryCatch({
-        fp       <- input$file$datapath
+        fp       <- cf$datapath
         raw_data <- read_softmax_bca(fp)
         if (is.null(raw_data$groups) || nrow(raw_data$groups) == 0)
           stop("No group data found. Ensure this is a valid SoftMax Pro export.")
-        bca_data(list(filepath = fp, raw = raw_data, name = input$file$name))
+        bca_data(list(filepath = fp, raw = raw_data, name = cf$name))
       }, error = function(e) {
         bca_data(list(error = conditionMessage(e)))
       })
-    })
+    }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
     output$file_status <- shiny::renderUI({
       shiny::req(bca_data())
@@ -176,18 +206,23 @@ bca_server <- function(id) {
         plot_placeholder("\U0001f4c8", "Run analysis to see standard curve")
     })
 
-    # ---- Run analysis ----------------------------------------------------
-    shiny::observeEvent(input$run, {
-      shiny::req(bca_data())
+    # ---- Analysis core --------------------------------------------------
+    # Extracted so we can call it from both the user-clicked Run button
+    # and the auto-run trigger after a successful parse. Reads the current
+    # form inputs (mode, volume, etc.) each time it's called.
+    .run_analysis <- function() {
       d <- bca_data()
-      if (!is.null(d$error)) {
-        shiny::showNotification(d$error, type = "error"); return()
-      }
-      if (input$mode == "manual" &&
-          (is.na(input$manual_conc) || input$manual_conc <= 0)) {
+      if (is.null(d) || !is.null(d$error)) return(invisible(NULL))
+
+      mode <- input$mode %||% "auto"
+      if (mode == "manual" &&
+          (is.null(input$manual_conc) || is.na(input$manual_conc) ||
+           input$manual_conc <= 0)) {
         shiny::showNotification("Please enter a valid manual concentration.",
-                                type = "warning"); return()
+                                type = "warning"); return(invisible(NULL))
       }
+      vol <- input$volume
+      if (is.null(vol) || is.na(vol) || vol <= 0) vol <- 1.0   # safety net
 
       shiny::withProgress(message = "Analysing BCA\u2026", value = 0, {
         tryCatch({
@@ -195,13 +230,13 @@ bca_server <- function(id) {
           std_curve <- create_standard_curve(d$raw)
 
           shiny::incProgress(0.4, detail = "Calculating yield\u2026")
-          manual_conc <- if (input$mode == "manual") input$manual_conc else NULL
+          manual_conc <- if (mode == "manual") input$manual_conc else NULL
           res <- calculate_protein_yield(
             file_path            = d$filepath,
             std_curve            = std_curve,
-            volume_ml            = input$volume,
-            digits               = input$digits,
-            title                = input$title,
+            volume_ml            = vol,
+            digits               = input$digits %||% 2,
+            title                = input$title %||% "",
             manual_concentration = manual_conc
           )
           res_row   <- as.data.frame(res$data)[1, ]
@@ -216,24 +251,41 @@ bca_server <- function(id) {
             vol       = vol_val,
             yield     = yield_val,
             gt        = res$gt,
-            title     = input$title,
+            title     = input$title %||% "",
             file_name = d$name
           ))
-
-          bca_history(c(bca_history(), list(list(
-            time  = format(Sys.time(), "%H:%M:%S"),
-            file  = d$name,
-            conc  = conc_val,
-            yield = yield_val,
-            r2    = std_curve$r2,
-            mode  = input$mode
-          ))))
-
         }, error = function(e) {
           shiny::showNotification(paste("Analysis error:", conditionMessage(e)),
                                   type = "error", duration = 10)
         })
       })
+    }
+
+    # Trigger 1: user clicked "Run Analysis"
+    shiny::observeEvent(input$run, .run_analysis())
+
+    # Trigger 2: auto-run after a successful parse. Fires when bca_data
+    # changes to a non-error value (i.e. a successful upload or example
+    # load). User can still hit Run Analysis later to re-run with
+    # different parameters.
+    shiny::observeEvent(bca_data(), {
+      d <- bca_data()
+      if (is.null(d) || !is.null(d$error)) return()
+      .run_analysis()
+    }, ignoreInit = TRUE)
+
+    # ---- Trigger 3: session start with bundled example -----------------
+    # Same one-shot observe() pattern as AKTA. Defers until after Shiny's
+    # first reactive flush so input bindings are resolved, and provides a
+    # reactive context for the inner code. Self-destructs after one run.
+    .load_example_file <- function() {
+      cf <- .bca_example_file()
+      if (!is.null(cf)) current_file(cf)
+    }
+    .example_loader_obs <- shiny::observe({
+      .example_loader_obs$destroy()
+      tryCatch(.load_example_file(), error = function(e)
+        message("[BCA] example load failed: ", conditionMessage(e)))
     })
 
     # ---- Plot ------------------------------------------------------------
@@ -277,20 +329,6 @@ bca_server <- function(id) {
         shiny::column(4, result_badge("Total Yield",   sprintf("%.2f mg",    r$yield), tone = "green")),
         shiny::column(4, result_badge("R\u00b2",       sprintf("%.4f",       r$curve$r2), tone = "orange"))
       )
-    })
-
-    output$results_table <- DT::renderDT({
-      shiny::req(bca_results())
-      r   <- bca_results()
-      fmt <- paste0("%.", input$digits, "f")
-      df  <- data.frame(
-        Parameter = c("Concentration (mg/mL)", "Volume (mL)",
-                      "Total Yield (mg)", "R\u00b2"),
-        Value     = c(sprintf(fmt, r$conc), sprintf(fmt, r$vol),
-                      sprintf(fmt, r$yield), sprintf("%.4f", r$curve$r2))
-      )
-      DT::datatable(df, options = list(dom = "t", ordering = FALSE),
-                    rownames = FALSE, class = "compact")
     })
 
     output$download_buttons <- shiny::renderUI({
@@ -342,46 +380,6 @@ bca_server <- function(id) {
           Title              = input$title,
           Date               = Sys.time()
         ), file, row.names = FALSE)
-      }
-    )
-
-    # ---- History ---------------------------------------------------------
-    output$history_ui <- shiny::renderUI({
-      h <- bca_history()
-      if (length(h) == 0) {
-        return(shiny::p("No analyses run yet this session.",
-                        style = "color: var(--muted); font-size: 0.8rem;"))
-      }
-      rows <- lapply(rev(h), function(e) {
-        shiny::div(class = "history-row",
-          style = "grid-template-columns: 80px 1fr 1fr 1fr 1fr;",
-          shiny::div(class = "history-time", e$time),
-          shiny::div(style = "font-size:0.78rem; color:var(--txt);", e$file),
-          shiny::div(class = "history-val", sprintf("%.3f mg/mL", e$conc)),
-          shiny::div(class = "history-val", style = "color: var(--accent-green);",
-                     sprintf("%.3f mg", e$yield)),
-          shiny::div(class = "history-val", style = "color: var(--accent-warm);",
-                     sprintf("R\u00b2 %.4f", e$r2))
-        )
-      })
-      do.call(shiny::div, rows)
-    })
-
-    output$history_dl <- shiny::renderUI({
-      shiny::req(length(bca_history()) > 0)
-      shiny::downloadButton(ns("history_csv"), "\u2193 Export History CSV",
-                            class = "btn-download")
-    })
-
-    output$history_csv <- shiny::downloadHandler(
-      filename = function() ts_filename("BCA_history", "csv"),
-      content  = function(file) {
-        h  <- bca_history()
-        df <- do.call(rbind, lapply(h, function(e) data.frame(
-          Time = e$time, File = e$file, Conc_mgmL = e$conc,
-          Yield_mg = e$yield, R2 = e$r2, Mode = e$mode
-        )))
-        utils::write.csv(df, file, row.names = FALSE)
       }
     )
 
@@ -442,3 +440,46 @@ bca_server <- function(id) {
 
 # Make available to the export-zip code path in app.R
 bca_results_table_plot <- .bca_results_table_plot
+
+# ---- Example data loader ---------------------------------------------------
+# Returns a data.frame matching what shiny::fileInput would have produced
+# for a single .xls upload. Cached for the session so repeated visits to
+# the BCA tab don't redo the work. NULL if the file is missing.
+#
+# Unlike AKTA's example we don't need to decompress - the SoftMax export
+# is a small (<10 KB) tab-separated text file, so we just copy it into
+# tempdir so the parser gets a normal-looking upload path.
+.bca_example_cache <- new.env(parent = emptyenv())
+
+.bca_example_file <- function() {
+  if (!is.null(.bca_example_cache$path) &&
+      file.exists(.bca_example_cache$path)) {
+    return(data.frame(
+      name = "251114_CE_HsUCP1_Lipids_Final_Columns.xls",
+      datapath = .bca_example_cache$path,
+      stringsAsFactors = FALSE
+    ))
+  }
+
+  # Same defensive app_dir resolution as the AKTA example loader
+  app_dir_local <- if (exists("app_dir", envir = globalenv())) {
+    get("app_dir", envir = globalenv())
+  } else getwd()
+
+  candidates <- unique(c(
+    file.path(app_dir_local, "inst", "examples", "bca_example.xls"),
+    file.path(getwd(),       "inst", "examples", "bca_example.xls"),
+    file.path("inst", "examples", "bca_example.xls")
+  ))
+  src_path <- candidates[file.exists(candidates)][1]
+  if (is.na(src_path)) return(NULL)
+
+  tryCatch({
+    out_path <- file.path(tempdir(), "251114_CE_HsUCP1_Lipids_Final_Columns.xls")
+    file.copy(src_path, out_path, overwrite = TRUE)
+    .bca_example_cache$path <- out_path
+    data.frame(name = "251114_CE_HsUCP1_Lipids_Final_Columns.xls",
+               datapath = out_path,
+               stringsAsFactors = FALSE)
+  }, error = function(e) NULL)
+}

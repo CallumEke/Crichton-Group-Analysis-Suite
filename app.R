@@ -44,7 +44,7 @@ ui <- bslib::page_navbar(
   bslib::nav_panel("Home", icon = shiny::icon("house"),
                    home_ui("home")),
 
-  bslib::nav_panel("\u00c4KTA Chromatography",
+  bslib::nav_panel("AKTA",
                    icon  = shiny::icon("chart-line"),
                    value = "AKTA",
                    akta_ui("akta")),
@@ -54,12 +54,12 @@ ui <- bslib::page_navbar(
                    value = "BCA",
                    bca_ui("bca")),
 
-  bslib::nav_panel("CPM Peak Picker",
+  bslib::nav_panel("CPM Peak",
                    icon  = shiny::icon("temperature-half"),
                    value = "CPM",
                    cpm_ui("cpm")),
 
-  bslib::nav_panel("CPM Contour Plotting",
+  bslib::nav_panel("CPM Contour",
                    icon  = shiny::icon("border-all"),
                    value = "CPMCONTOUR",
                    cpm_contour_ui("cpm_contour")),
@@ -69,24 +69,39 @@ ui <- bslib::page_navbar(
                    value = "CPMQC",
                    cpm_qc_ui("cpm_qc")),
 
-  bslib::nav_panel("Gel Annotator",
+  bslib::nav_panel("Gel: Annotate",
                    icon  = shiny::icon("image"),
                    value = "GEL",
                    gel_ui("gel")),
 
-  bslib::nav_panel("UCP1 Proton Conductance",
+  bslib::nav_panel("Proton Conductance",
                    icon  = shiny::icon("vial"),
                    value = "UCP1",
                    ucp1_ui("ucp1")),
 
-  # -- Cross-tool export item in the navbar ---------------------------------
+  # Right-aligned Clear button. Each tool's server still owns the click;
+  # we just provide a single navbar-level affordance that fires the
+  # currently visible tool's clear via JS. See the observer in server().
   bslib::nav_spacer(),
-  bslib::nav_item(export_ui("export"))
+  bslib::nav_item(
+    shiny::tags$button(
+      id = "global_clear",
+      class = "btn-clear-nav",
+      onclick = "Shiny.setInputValue('nav_clear_click', Math.random(), {priority:'event'});",
+      shiny::HTML("\U0001f504  Clear")
+    )
+  )
 )
 
 
 # -- Server -------------------------------------------------------------------
 server <- function(input, output, session) {
+
+  # Defensive: re-set the upload size limit at server-function time as
+  # well as in global.R. Some Shiny hosting environments evaluate global.R
+  # in a way that doesn't propagate options() to the per-session R process,
+  # so setting it again here ensures every connection uses the higher limit.
+  options(shiny.maxRequestSize = 20 * 1024^2)
 
   # Wire up home-card navigation. Each card on the landing page writes its
   # target value (e.g. "BCA") to the `tool_select` input via JS; we react
@@ -97,25 +112,39 @@ server <- function(input, output, session) {
     bslib::nav_select(id = "nav", selected = input$tool_select)
   }, ignoreInit = TRUE)
 
-  # Each module returns a reactive() exposing its current results.
-  # Capture those so the export module can collect them.
-  bca_results         <- bca_server("bca")
-  cpm_results         <- cpm_server("cpm")
-  akta_results        <- akta_server("akta")
-  gel_results         <- gel_server("gel")
-  cpm_qc_results      <- cpm_qc_server("cpm_qc")
-  cpm_contour_results <- cpm_contour_server("cpm_contour")
-  ucp1_results        <- ucp1_server("ucp1")
+  # Global Clear button in the navbar. Each tool's actionButton(ns("clear"))
+  # renders as <button id="<module_id>-clear">. We just dispatch a click on
+  # the right one based on which tab is currently active. This lets us have
+  # a single navbar-level Clear button instead of a per-page bar without
+  # needing each module to be aware of the global button.
+  shiny::observeEvent(input$nav_clear_click, {
+    tab <- input$nav %||% ""
+    target <- switch(tab,
+      AKTA       = "akta-clear",
+      BCA        = "bca-clear",
+      CPM        = "cpm-clear",
+      CPMCONTOUR = "cpm_contour-clear",
+      CPMQC      = "cpm_qc-clear",
+      GEL        = "gel-clear",
+      UCP1       = "ucp1-clear",
+      NULL
+    )
+    if (!is.null(target)) {
+      shinyjs::runjs(sprintf(
+        "var el = document.getElementById('%s'); if (el) el.click();", target))
+    }
+  }, ignoreInit = TRUE)
 
-  export_server("export", tools = list(
-    bca         = bca_results,
-    cpm         = cpm_results,
-    akta        = akta_results,
-    gel         = gel_results,
-    cpm_qc      = cpm_qc_results,
-    cpm_contour = cpm_contour_results,
-    ucp1        = ucp1_results
-  ))
+  # Initialise each tool module. Each returns a reactive() exposing its
+  # current results, but the cross-tool report bundler was removed in
+  # favour of per-tool exports, so we don't capture those reactives here.
+  bca_server("bca")
+  cpm_server("cpm")
+  akta_server("akta")
+  gel_server("gel")
+  cpm_qc_server("cpm_qc")
+  cpm_contour_server("cpm_contour")
+  ucp1_server("ucp1")
 }
 
 

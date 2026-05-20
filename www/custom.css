@@ -190,33 +190,50 @@
     background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
     color: white;
     border: none;
-    padding: 0.6rem 1.2rem;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.9rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.78rem;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(239, 68, 68, 0.25);
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.35rem;
   }
   .btn-clear:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(239, 68, 68, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(239, 68, 68, 0.4);
     filter: brightness(1.1);
   }
   .btn-clear:active {
     transform: translateY(0px);
   }
-  
-  .clear-button-container {
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    background: rgba(239, 68, 68, 0.05);
-    border: 1px solid rgba(239, 68, 68, 0.2);
-    border-radius: 8px;
-    text-align: right;
+
+  /* Slim navbar Clear button. Discrete - sits in the navbar alongside
+     tool tabs, fires the active tool's clear via JS. Not the loud red
+     gradient because it's a maintenance affordance, not a primary
+     control; the click target is small but the hover state makes it
+     obvious if you go looking for it. */
+  .btn-clear-nav {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border-light);
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-right: 0.8rem;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .btn-clear-nav:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #FF7676;
+    border-color: rgba(239, 68, 68, 0.5);
   }
   
   /* ---- Clearing overlay ---- */
@@ -496,26 +513,6 @@
     color: var(--muted) !important;
   }
 
-  /* ---- History / session log ---- */
-  .history-row {
-    display: grid;
-    gap: 0.3rem;
-    padding: 0.55rem 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.79rem;
-  }
-  .history-row:last-child { border-bottom: none; }
-  .history-time {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: var(--muted);
-  }
-  .history-val {
-    font-family: var(--font-mono);
-    color: var(--accent);
-    font-weight: 500;
-  }
-
   /* ---- Settings panel ---- */
   .settings-group {
     border: 1px solid var(--border);
@@ -609,3 +606,56 @@
   /* ---- Progress bar ---- */
   .progress { height: 3px; background: var(--border); border-radius: 99px; margin-top: 0.4rem; }
   .progress-bar { background: var(--accent); border-radius: 99px; transition: width 0.3s ease; }
+
+  /* ===================================================================
+     Sticky preview pattern - applied per tool via .sticky-tool wrapper.
+     Used when a tool has many vertical workflow cards on the left and
+     a preview on the right; we want the preview to stay visible while
+     the user scrolls through the workflow.
+
+     Mechanics:
+       - The whole tool sits in a .sticky-tool container.
+       - Left column gets .workflow-col: independent scroll, capped height.
+       - Right column gets .preview-col: position:sticky, follows the viewport.
+
+     Breakpoint: Bootstrap's md (>=992px) is where two-column layouts
+     normally hold. Below that bslib collapses to single column anyway,
+     so the sticky pattern doesn't apply.
+     =================================================================== */
+
+  @media (min-width: 992px) {
+    .sticky-tool .workflow-col {
+      max-height: calc(100vh - 80px);   /* viewport minus navbar height */
+      overflow-y: auto;
+      padding-right: 0.8rem;             /* space for the scrollbar */
+    }
+
+    /* Custom scrollbar styling on the workflow column to match the dark
+       theme. Without this you get a default light-grey scrollbar that
+       looks out of place against the dark panels. */
+    .sticky-tool .workflow-col::-webkit-scrollbar { width: 8px; }
+    .sticky-tool .workflow-col::-webkit-scrollbar-track {
+      background: var(--bg-deep);
+      border-radius: 4px;
+    }
+    .sticky-tool .workflow-col::-webkit-scrollbar-thumb {
+      background: var(--border-light);
+      border-radius: 4px;
+    }
+    .sticky-tool .workflow-col::-webkit-scrollbar-thumb:hover {
+      background: var(--accent);
+    }
+    /* Firefox uses different scrollbar properties */
+    .sticky-tool .workflow-col {
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-light) var(--bg-deep);
+    }
+
+    .sticky-tool .preview-col {
+      position: sticky;
+      top: 16px;                          /* tight against the navbar */
+      align-self: flex-start;             /* don't stretch to row height */
+      max-height: calc(100vh - 60px);
+      overflow-y: auto;
+    }
+  }

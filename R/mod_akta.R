@@ -22,21 +22,25 @@ akta_ui <- function(id) {
   }
 
   shiny::tagList(
-    shiny::div(class = "clear-button-container",
+    shiny::div(style = "display: none;",
       shiny::actionButton(ns("clear"), "\U0001f504  Clear All Data", class = "btn-clear")
     ),
 
-    shiny::fluidRow(
-      # ----- Left column: controls (1-7) ----------------------------------
-      shiny::column(4,
-        lab_card(
-          step_title(1, "Upload Data File(s)"),
-          info_box("Upload one file for a single run, or multiple to overlay traces."),
-          shiny::fileInput(ns("files"), NULL, accept = ".csv", multiple = TRUE,
-                           buttonLabel = "Browse\u2026",
-                           placeholder = "UNICORN 7 CSV export(s)"),
-          shiny::uiOutput(ns("file_status"))
-        ),
+    shiny::div(class = "sticky-tool",
+      shiny::fluidRow(
+        # ----- Left column: controls (1-7) --------------------------------
+        # `workflow-col` (in custom.css) gives this column its own scroll
+        # so the preview on the right can stay sticky.
+        shiny::column(4,
+          shiny::div(class = "workflow-col",
+            lab_card(
+              step_title(1, "Upload Data File(s)"),
+              info_box("Upload one file for a single run, or multiple to overlay traces."),
+              shiny::fileInput(ns("files"), NULL, accept = ".csv", multiple = TRUE,
+                               buttonLabel = "Browse\u2026",
+                               placeholder = "UNICORN 7 CSV export(s)"),
+              shiny::uiOutput(ns("file_status"))
+            ),
 
         lab_card(
           step_title(2, "Custom Sample Names"),
@@ -57,10 +61,11 @@ akta_ui <- function(id) {
 
         lab_card(
           step_title(4, "Display Options"),
-          shiny::checkboxInput(ns("show_fractions"), "Show fraction markers",  value = TRUE),
-          shiny::checkboxInput(ns("show_cond"),      "Show conductance trace", value = FALSE),
-          shiny::checkboxInput(ns("show_uv260"),     "Show UV 260 nm trace",   value = FALSE),
-          shiny::checkboxInput(ns("show_pctb"),      "Show % Buffer B trace",  value = FALSE),
+          shiny::checkboxInput(ns("show_fractions"),       "Show fraction markers",  value = TRUE),
+          shiny::checkboxInput(ns("show_fraction_labels"), "Show fraction labels",   value = TRUE),
+          shiny::checkboxInput(ns("show_cond"),            "Show conductance trace", value = FALSE),
+          shiny::checkboxInput(ns("show_uv260"),           "Show UV 260 nm trace",   value = FALSE),
+          shiny::checkboxInput(ns("show_pctb"),            "Show % Buffer B trace",  value = FALSE),
           shiny::br(),
           shiny::div(class = "lbl", "Highlight fractions"),
           shiny::div(style = "font-size:0.72rem;color:var(--muted);margin-bottom:0.4rem;",
@@ -139,19 +144,21 @@ akta_ui <- function(id) {
           shiny::br(), shiny::br(),
           shiny::uiOutput(ns("download_buttons"))
         )
-      ),
-
-      # ----- Right column: plot + file list + history ---------------------
-      shiny::column(8,
-        lab_card(
-          shiny::div(class = "lab-card-title", "\U0001f4c8  Chromatography Profile"),
-          shiny::uiOutput(ns("plot_placeholder")),
-          shiny::plotOutput(ns("plot"), height = "500px")
+          )  # close workflow-col div
         ),
-        shiny::uiOutput(ns("file_list_ui")),
-        lab_card(
-          shiny::div(class = "lab-card-title", "\U0001f551  Session History"),
-          shiny::uiOutput(ns("history_ui"))
+
+        # ----- Right column: plot + file list + history -------------------
+        # `preview-col` (in custom.css) makes this column sticky so it
+        # stays in view while the workflow column scrolls.
+        shiny::column(8,
+          shiny::div(class = "preview-col",
+            lab_card(
+              shiny::div(class = "lab-card-title", "\U0001f4c8  Chromatography Profile"),
+              shiny::uiOutput(ns("plot_placeholder")),
+              shiny::plotOutput(ns("plot"), height = "500px")
+            ),
+            shiny::uiOutput(ns("file_list_ui"))
+          )
         )
       )
     )
@@ -165,40 +172,66 @@ akta_server <- function(id) {
     ns <- session$ns
 
     akta_results    <- shiny::reactiveVal(NULL)
-    akta_history    <- shiny::reactiveVal(list())
     akta_annotation <- shiny::reactiveVal(NULL)
 
-    # ---- Clear -----------------------------------------------------------
-    shiny::observeEvent(input$clear, {
+    # current_files is the single source of truth for "what data are we
+    # plotting?" - shape mirrors what shiny::fileInput returns:
+    # data.frame(name, datapath, ...). It's populated from three sources:
+    #   - input$files when the user uploads
+    #   - the bundled example on session start (if no upload yet)
+    #   - never directly cleared; setting it always means "and replot now"
+    current_files <- shiny::reactiveVal(NULL)
+
+    # ---- Internal: clear all derived state -----------------------------
+    # Called on every new file upload AND by the navbar Clear button via
+    # input$clear (the hidden button kept for compatibility). Wipes
+    # results, annotations, and user inputs that wouldn't make sense to
+    # carry across to a different dataset.
+    .clear_state <- function(reset_inputs = TRUE) {
       akta_results(NULL)
-      akta_history(list())
       akta_annotation(NULL)
-      for (i in c("files", "custom_names", "vol_min", "vol_max",
-                  "highlight", "int_start", "int_end")) shinyjs::reset(i)
-      shiny::showNotification("\u00c4KTA data cleared", type = "message", duration = 2)
+      if (reset_inputs) {
+        for (i in c("custom_names", "vol_min", "vol_max",
+                    "highlight", "hl_g2", "hl_g3", "hl_g4",
+                    "int_start", "int_end")) shinyjs::reset(i)
+      }
+    }
+
+    # ---- Clear button (still in DOM, fired by global navbar Clear) -----
+    shiny::observeEvent(input$clear, {
+      current_files(NULL)
+      .clear_state()
+      # Reload the bundled example so the preview is never empty after
+      # clearing. If the example file is missing or fails to load, fall
+      # through silently and the user sees the placeholder.
+      tryCatch(.load_example_files(), error = function(e) NULL)
+      shiny::showNotification("\u00c4KTA data cleared", type = "message",
+                              duration = 2)
     })
 
     # ---- File-status pill ------------------------------------------------
     output$file_status <- shiny::renderUI({
-      shiny::req(input$files)
-      n <- nrow(input$files)
+      cf <- current_files()
+      shiny::req(cf)
+      n <- nrow(cf)
       status_pill("ready",
                   sprintf("%d file%s loaded", n, if (n > 1) "s" else ""))
     })
 
     output$file_list_ui <- shiny::renderUI({
-      shiny::req(input$files)
-      if (nrow(input$files) <= 1) return(NULL)
+      cf <- current_files()
+      shiny::req(cf)
+      if (nrow(cf) <= 1) return(NULL)
       lab_card(
         shiny::div(class = "lab-card-title", "\U0001f4c1  Loaded files (overlay order)"),
-        lapply(seq_len(nrow(input$files)), function(i) {
+        lapply(seq_len(nrow(cf)), function(i) {
           shiny::div(style = "display:flex;align-items:center;gap:.6rem;padding:.3rem 0;",
             shiny::tags$span(
               style = paste("font-family:'JetBrains Mono',monospace;",
                             "font-size:.72rem;background:#161E2E;color:#00C2FF;",
                             "padding:.1rem .4rem;border-radius:4px;"),
               as.character(i)),
-            shiny::tags$span(input$files$name[i],
+            shiny::tags$span(cf$name[i],
                              style = "font-size:.83rem;color:#E8F0FE;")
           )
         })
@@ -210,9 +243,17 @@ akta_server <- function(id) {
         plot_placeholder("\U0001f4ca", "Upload file(s) and click Generate Plot")
     })
 
-    # ---- Generate plot ---------------------------------------------------
-    shiny::observeEvent(input$run, {
-      shiny::req(input$files)
+    # ---- Plot generation -------------------------------------------------
+    # The actual plot-build logic, factored out so we can call it from
+    # three places:
+    #   - user clicks "Generate Plot" (input$run)
+    #   - user uploads new files (input$files - auto-replot on load)
+    #   - session start, after preloading example data
+    # The function always reads from current_files() so all three paths
+    # use the same data source.
+    .generate_plot <- function() {
+      cf <- current_files()
+      if (is.null(cf) || nrow(cf) == 0) return()
       akta_results(NULL)
 
       # Capture the raw user inputs now; resolve them against the file's
@@ -236,15 +277,15 @@ akta_server <- function(id) {
       # Rename temp files to original names so the plot legend reads
       # "WT_protein" not "0a4f3b.csv" - plot_akta_improved() uses filenames.
       renamed <- file.path(
-        dirname(input$files$datapath),
-        tools::file_path_sans_ext(input$files$name)
+        dirname(cf$datapath),
+        tools::file_path_sans_ext(cf$name)
       )
       for (i in seq_along(renamed))
         if (!file.exists(renamed[i]))
-          file.copy(input$files$datapath[i], renamed[i])
+          file.copy(cf$datapath[i], renamed[i])
 
       # Custom sample-name overrides (one per line)
-      cnames_raw <- trimws(input$custom_names)
+      cnames_raw <- trimws(input$custom_names %||% "")
       if (nchar(cnames_raw) > 0) {
         cnames <- trimws(strsplit(cnames_raw, "\n")[[1]])
         cnames <- cnames[nchar(cnames) > 0]
@@ -261,16 +302,17 @@ akta_server <- function(id) {
         tryCatch({
           shiny::incProgress(0.4, detail = "Reading files\u2026")
           p <- plot_akta_improved(
-            files               = renamed,
-            volume_range        = vol_range,
-            show_fractions      = input$show_fractions,
-            show_conductance    = input$show_cond,
-            show_uv260          = input$show_uv260,
-            show_percent_b      = input$show_pctb,
-            highlight_fractions = NULL,   # we draw highlights ourselves
-            save_plot           = FALSE,
-            theme               = input$theme,
-            line_width          = input$linewidth
+            files                = renamed,
+            volume_range         = vol_range,
+            show_fractions       = input$show_fractions,
+            show_fraction_labels = input$show_fraction_labels,
+            show_conductance     = input$show_cond,
+            show_uv260           = input$show_uv260,
+            show_percent_b       = input$show_pctb,
+            highlight_fractions  = NULL,   # we draw highlights ourselves
+            save_plot            = FALSE,
+            theme                = input$theme,
+            line_width           = input$linewidth
           )
 
           # Layer the user's highlight groups on top of the plot. Doing
@@ -280,7 +322,7 @@ akta_server <- function(id) {
           # serpentine and other non-monotonic dispenser modes. Rectangles
           # are drawn on top of the fraction tick-marks but kept at
           # alpha = 0.30 so labels remain readable.
-          fractions <- .parse_akta_fractions(input$files$datapath[1])
+          fractions <- .parse_akta_fractions(cf$datapath[1])
           highlight_groups <- .compile_highlight_groups(highlight_inputs, fractions)
           if (length(highlight_groups) > 0) {
             for (grp in highlight_groups) {
@@ -296,22 +338,51 @@ akta_server <- function(id) {
 
           shiny::incProgress(0.5, detail = "Rendering\u2026")
           akta_results(list(plot = p,
-                            file_names = input$files$name,
+                            file_names = cf$name,
                             renamed = renamed))
-
-          akta_history(c(akta_history(), list(list(
-            time  = format(Sys.time(), "%H:%M:%S"),
-            files = paste(input$files$name, collapse = ", "),
-            n     = nrow(input$files),
-            vol   = if (!is.null(vol_range))
-                      sprintf("%.0f-%.0f mL", vol_range[1], vol_range[2])
-                    else "full"
-          ))))
         }, error = function(e) {
           shiny::showNotification(paste("\u00c4KTA error:", conditionMessage(e)),
                                   type = "error", duration = 12)
         })
       })
+    }
+
+    # ---- Trigger 1: user clicked "Generate Plot" -----------------------
+    shiny::observeEvent(input$run, .generate_plot())
+
+    # ---- Trigger 2: user uploaded new file(s) --------------------------
+    # New upload = fresh dataset. Clear derived state (highlights, ranges,
+    # annotations) and replot automatically - user shouldn't have to hit
+    # "Generate Plot" just to see the trace of what they just loaded.
+    shiny::observeEvent(input$files, {
+      .clear_state()
+      current_files(input$files)
+      .generate_plot()
+    }, ignoreInit = TRUE)
+
+    # ---- Trigger 3: session start with bundled example -----------------
+    # Load the bundled UNICORN export the first time this module is seen
+    # this session, so the preview panel is populated immediately.
+    #
+    # We use a one-shot observer() here rather than a plain function call
+    # for two reasons:
+    #   1. It defers until after Shiny's first reactive flush, when input
+    #      bindings are fully resolved (server setup runs too early)
+    #   2. It runs inside a reactive context, so .generate_plot() can read
+    #      input$X values without throwing "no active reactive context"
+    # The observer destroys itself after the first run via obs$destroy()
+    # so it doesn't re-fire on later state changes.
+    .load_example_files <- function() {
+      cf <- .akta_example_files()
+      if (!is.null(cf)) {
+        current_files(cf)
+        .generate_plot()
+      }
+    }
+    .example_loader_obs <- shiny::observe({
+      .example_loader_obs$destroy()
+      tryCatch(.load_example_files(), error = function(e)
+        message("[AKTA] example load failed: ", conditionMessage(e)))
     })
 
     # ---- Plot ------------------------------------------------------------
@@ -360,7 +431,8 @@ akta_server <- function(id) {
     # Single source of truth: parses UV trace from first uploaded file,
     # integrates between v_start/v_end, computes centroid + MW.
     akta_integration <- shiny::reactive({
-      shiny::req(input$files)
+      cf <- current_files()
+      shiny::req(cf)
       v_start <- input$int_start
       v_end   <- input$int_end
       if (is.na(v_start) || is.na(v_end) || v_start >= v_end) return(NULL)
@@ -369,7 +441,7 @@ akta_server <- function(id) {
       total_vol <- if (is.na(input$total_vol)) 24.00 else input$total_vol
 
       tryCatch({
-        uv_df <- .parse_akta_uv_trace(input$files$datapath[1])
+        uv_df <- .parse_akta_uv_trace(cf$datapath[1])
         if (is.null(uv_df))
           return(list(error = "Could not read UV trace for integration."))
 
@@ -453,7 +525,10 @@ akta_server <- function(id) {
       content  = function(file) {
         res <- akta_integration()
         shiny::req(!is.null(res) && is.null(res$error))
-        run_name <- if (!is.null(input$files)) input$files$name[1] else "unknown"
+        run_name <- {
+          cf <- current_files()
+          if (!is.null(cf)) cf$name[1] else "unknown"
+        }
         utils::write.csv(data.frame(
           Run            = run_name,
           Range_start_mL = res$v_start,
@@ -515,9 +590,10 @@ akta_server <- function(id) {
     output$dl_csv <- shiny::downloadHandler(
       filename = function() ts_filename("AKTA_traces", "csv"),
       content  = function(file) {
-        shiny::req(akta_results(), input$files)
-        files     <- input$files$datapath
-        run_names <- tools::file_path_sans_ext(input$files$name)
+        cf <- current_files()
+        shiny::req(akta_results(), cf)
+        files     <- cf$datapath
+        run_names <- tools::file_path_sans_ext(cf$name)
 
         # Parse UV 280 trace for every uploaded file
         traces <- lapply(files, .parse_akta_uv_trace)
@@ -543,26 +619,6 @@ akta_server <- function(id) {
                                 type = "message", duration = 3)
       }
     )
-
-    # ---- History --------------------------------------------------------
-    output$history_ui <- shiny::renderUI({
-      h <- akta_history()
-      if (length(h) == 0)
-        return(shiny::p("No plots generated yet.",
-                        style = "color:var(--muted);font-size:0.8rem;"))
-      rows <- lapply(rev(h), function(e) {
-        shiny::div(class = "history-row",
-          style = "grid-template-columns: 70px 1fr 80px 80px;",
-          shiny::div(class = "history-time", e$time),
-          shiny::div(style = "font-size:0.75rem;color:var(--txt);overflow:hidden;
-                              text-overflow:ellipsis;white-space:nowrap;", e$files),
-          shiny::div(style = "font-size:0.75rem;color:var(--muted);",
-                     paste0(e$n, " file(s)")),
-          shiny::div(style = "font-size:0.75rem;color:var(--muted);", e$vol)
-        )
-      })
-      do.call(shiny::div, rows)
-    })
 
     # ---- Public reactive ------------------------------------------------
     # Pass current results + annotation for the cross-tool export
@@ -805,4 +861,63 @@ akta_server <- function(id) {
       ns(paste0("hl_g", idx)), NULL,
       placeholder = sprintf("Group %d fractions", idx)))
   )
+}
+
+# ---- Example data loader ---------------------------------------------------
+# Decompresses the bundled UNICORN example into a tempfile and returns
+# a data.frame matching what shiny::fileInput would have produced for a
+# single file. NULL if the example file is missing or decompression fails.
+#
+# We cache the decompressed path inside the session via a memoised local
+# environment to avoid redoing the work every time the AKTA module is
+# revisited. The decompressed file is left in the OS tempdir, which is
+# cleaned up automatically when the R session ends.
+.akta_example_cache <- new.env(parent = emptyenv())
+
+.akta_example_files <- function() {
+  if (!is.null(.akta_example_cache$path) &&
+      file.exists(.akta_example_cache$path)) {
+    return(data.frame(
+      name = "CGAS_Akta_Example_Data.csv",
+      datapath = .akta_example_cache$path,
+      stringsAsFactors = FALSE
+    ))
+  }
+
+  # Resolve the app directory the same defensive way utils_theme.R does:
+  # prefer the global app_dir set by global.R, fall back to getwd() so the
+  # module works even if sourced outside the normal app startup flow.
+  app_dir_local <- if (exists("app_dir", envir = globalenv())) {
+    get("app_dir", envir = globalenv())
+  } else getwd()
+
+  # Try the resolved path first, then a couple of fallbacks for robustness.
+  candidates <- unique(c(
+    file.path(app_dir_local, "inst", "examples", "akta_example.csv.gz"),
+    file.path(getwd(),       "inst", "examples", "akta_example.csv.gz"),
+    file.path("inst", "examples", "akta_example.csv.gz")
+  ))
+  gz_path <- candidates[file.exists(candidates)][1]
+  if (is.na(gz_path)) return(NULL)
+
+  tryCatch({
+    out_path <- file.path(tempdir(), "CGAS_Akta_Example_Data.csv")
+    # gzip-decompress in chunks so we don't need to know the decompressed
+    # size up front. The UTF-16LE BOM and content survive byte-for-byte
+    # because we copy raw bytes through gzfile() without any text-mode
+    # interpretation.
+    con_in  <- gzfile(gz_path, "rb")
+    con_out <- file(out_path, "wb")
+    on.exit({ close(con_in); close(con_out) }, add = TRUE)
+    repeat {
+      chunk <- readBin(con_in, "raw", n = 65536)
+      if (length(chunk) == 0) break
+      writeBin(chunk, con_out)
+    }
+
+    .akta_example_cache$path <- out_path
+    data.frame(name = "CGAS_Akta_Example_Data.csv",
+               datapath = out_path,
+               stringsAsFactors = FALSE)
+  }, error = function(e) NULL)
 }

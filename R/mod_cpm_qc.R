@@ -57,7 +57,7 @@ cpm_qc_ui <- function(id) {
   cond_multi  <- sprintf("input['%s'] == 'multi'", mode_input)
 
   shiny::tagList(
-    shiny::div(class = "clear-button-container",
+    shiny::div(style = "display: none;",
       shiny::actionButton(ns("clear"), "\U0001f504  Clear All Data", class = "btn-clear")
     ),
 
@@ -73,88 +73,94 @@ cpm_qc_ui <- function(id) {
 
     # ---- SIMPLE MODE ----------------------------------------------------
     shiny::conditionalPanel(condition = cond_simple,
-      shiny::fluidRow(
-        shiny::column(4,
-          lab_card(
-            step_title(1, "Upload Data File"),
-            shiny::fileInput(ns("file"), NULL, accept = ".csv",
-                             buttonLabel = "Browse\u2026",
-                             placeholder = "RotorGene Q CSV export"),
-            shiny::uiOutput(ns("file_status"))
+      shiny::div(class = "sticky-tool",
+        shiny::fluidRow(
+          shiny::column(4,
+            shiny::div(class = "workflow-col",
+              lab_card(
+                step_title(1, "Upload Data File"),
+                shiny::fileInput(ns("file"), NULL, accept = ".csv",
+                                 buttonLabel = "Browse\u2026",
+                                 placeholder = "RotorGene Q CSV export"),
+                shiny::uiOutput(ns("file_status"))
+              ),
+              lab_card(
+                step_title(2, "Select Samples"),
+                info_box("Select two samples to compare (e.g. -GDP and +GDP)."),
+                shiny::uiOutput(ns("sample_a_ui")),
+                shiny::uiOutput(ns("sample_b_ui"))
+              ),
+              lab_card(
+                step_title(3, "Sample Labels & Colours"),
+                shiny::fluidRow(
+                  shiny::column(8, shiny::textInput(ns("label_a"), "Label A", value = "-GDP")),
+                  shiny::column(4, shiny::div(class = "lbl", "Colour A"),
+                    .qc_colour_picker(ns("col_a"), "#E41A1C"))
+                ),
+                shiny::fluidRow(
+                  shiny::column(8, shiny::textInput(ns("label_b"), "Label B", value = "+GDP")),
+                  shiny::column(4, shiny::div(class = "lbl", "Colour B"),
+                    .qc_colour_picker(ns("col_b"), "#377EB8"))
+                )
+              ),
+              lab_card(
+                step_title(4, "Tm Values"),
+                info_box("Auto-detected as the maximum of the dF/dT peak. Override manually if needed."),
+                shiny::fluidRow(
+                  shiny::column(6, shiny::numericInput(ns("tm_a"), "Tm A (\u00b0C)",
+                                                       value = NULL, step = 0.1)),
+                  shiny::column(6, shiny::numericInput(ns("tm_b"), "Tm B (\u00b0C)",
+                                                       value = NULL, step = 0.1))
+                ),
+                shiny::uiOutput(ns("tm_auto_status")),
+                shiny::br(),
+                shiny::checkboxInput(ns("show_tm_labels"),
+                                     "Show Tm values above bars", value = FALSE),
+                shiny::checkboxInput(ns("show_dtm"),
+                                     "Show \u0394T\u2098 annotation", value = FALSE)
+              ),
+              lab_card(
+                step_title(5, "Plot Title"),
+                shiny::textInput(ns("title"), NULL, placeholder = "e.g. NaOaUCP1 CPM QC"),
+                shiny::div(class = "lab-card-title", "Plot Style"),
+                shiny::numericInput(ns("linewidth"), "Line width",
+                                    value = 1.5, min = 0.5, max = 4, step = 0.25),
+                shiny::br(),
+                shiny::tags$button("\u2699  Advanced Plot Settings", class = "adv-toggle",
+                  onclick = sprintf("$('#%s').slideToggle(200)", ns("adv_panel"))),
+                shiny::div(id = ns("adv_panel"), style = "display:none;",
+                  shiny::div(class = "settings-group",
+                    shiny::div(class = "settings-group-title", "Legend Position"),
+                    shiny::selectInput(ns("legend_pos"), NULL,
+                      choices = c("Top right"="topright","Top left"="topleft",
+                                  "Bottom right"="bottomright","Bottom left"="bottomleft"),
+                      selected = "topright", width = "100%")))
+              ),
+              lab_card(
+                step_title(6, "Generate"),
+                shiny::actionButton(ns("run"), "\u25b6  Generate QC Plots", class = "btn-run"),
+                shiny::br(), shiny::br(),
+                shiny::uiOutput(ns("download_buttons"))
+              )
+            )  # close workflow-col
           ),
-          lab_card(
-            step_title(2, "Select Samples"),
-            info_box("Select two samples to compare (e.g. -GDP and +GDP)."),
-            shiny::uiOutput(ns("sample_a_ui")),
-            shiny::uiOutput(ns("sample_b_ui"))
-          ),
-          lab_card(
-            step_title(3, "Sample Labels & Colours"),
-            shiny::fluidRow(
-              shiny::column(8, shiny::textInput(ns("label_a"), "Label A", value = "-GDP")),
-              shiny::column(4, shiny::div(class = "lbl", "Colour A"),
-                .qc_colour_picker(ns("col_a"), "#E41A1C"))
-            ),
-            shiny::fluidRow(
-              shiny::column(8, shiny::textInput(ns("label_b"), "Label B", value = "+GDP")),
-              shiny::column(4, shiny::div(class = "lbl", "Colour B"),
-                .qc_colour_picker(ns("col_b"), "#377EB8"))
-            )
-          ),
-          lab_card(
-            step_title(4, "Tm Values"),
-            info_box("Auto-detected as the maximum of the dF/dT peak. Override manually if needed."),
-            shiny::fluidRow(
-              shiny::column(6, shiny::numericInput(ns("tm_a"), "Tm A (\u00b0C)",
-                                                   value = NULL, step = 0.1)),
-              shiny::column(6, shiny::numericInput(ns("tm_b"), "Tm B (\u00b0C)",
-                                                   value = NULL, step = 0.1))
-            ),
-            shiny::uiOutput(ns("tm_auto_status")),
-            shiny::br(),
-            shiny::checkboxInput(ns("show_tm_labels"),
-                                 "Show Tm values above bars", value = FALSE),
-            shiny::checkboxInput(ns("show_dtm"),
-                                 "Show \u0394T\u2098 annotation", value = FALSE)
-          ),
-          lab_card(
-            step_title(5, "Plot Title"),
-            shiny::textInput(ns("title"), NULL, placeholder = "e.g. NaOaUCP1 CPM QC"),
-            shiny::div(class = "lab-card-title", "Plot Style"),
-            shiny::numericInput(ns("linewidth"), "Line width",
-                                value = 1.5, min = 0.5, max = 4, step = 0.25),
-            shiny::br(),
-            shiny::tags$button("\u2699  Advanced Plot Settings", class = "adv-toggle",
-              onclick = sprintf("$('#%s').slideToggle(200)", ns("adv_panel"))),
-            shiny::div(id = ns("adv_panel"), style = "display:none;",
-              shiny::div(class = "settings-group",
-                shiny::div(class = "settings-group-title", "Legend Position"),
-                shiny::selectInput(ns("legend_pos"), NULL,
-                  choices = c("Top right"="topright","Top left"="topleft",
-                              "Bottom right"="bottomright","Bottom left"="bottomleft"),
-                  selected = "topright", width = "100%")))
-          ),
-          lab_card(
-            step_title(6, "Generate"),
-            shiny::actionButton(ns("run"), "\u25b6  Generate QC Plots", class = "btn-run"),
-            shiny::br(), shiny::br(),
-            shiny::uiOutput(ns("download_buttons"))
-          )
-        ),
-        shiny::column(8,
-          shiny::uiOutput(ns("badges")),
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f321\ufe0f  Raw Fluorescence"),
-            shiny::uiOutput(ns("raw_placeholder")),
-            shiny::plotOutput(ns("raw_plot"), height = "300px")
-          ),
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f4c8  dF/dT (unnormalised)"),
-            shiny::plotOutput(ns("dfdt_plot"), height = "300px")
-          ),
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f4ca  Tm Comparison"),
-            shiny::plotOutput(ns("tm_plot"), height = "320px")
+          shiny::column(8,
+            shiny::div(class = "preview-col",
+              shiny::uiOutput(ns("badges")),
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f321\ufe0f  Raw Fluorescence"),
+                shiny::uiOutput(ns("raw_placeholder")),
+                shiny::plotOutput(ns("raw_plot"), height = "300px")
+              ),
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f4c8  dF/dT (unnormalised)"),
+                shiny::plotOutput(ns("dfdt_plot"), height = "300px")
+              ),
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f4ca  Tm Comparison"),
+                shiny::plotOutput(ns("tm_plot"), height = "320px")
+              )
+            )  # close preview-col
           )
         )
       )
@@ -162,54 +168,60 @@ cpm_qc_ui <- function(id) {
 
     # ---- MULTI MODE ----------------------------------------------------
     shiny::conditionalPanel(condition = cond_multi,
-      shiny::fluidRow(
-        shiny::column(4,
-          lab_card(
-            step_title(1, "Upload Data File"),
-            info_box("Same file format as Simple mode. Re-use an already uploaded file by switching modes without re-uploading."),
-            shiny::fileInput(ns("mqc_file"), NULL, accept = ".csv",
-                             buttonLabel = "Browse\u2026",
-                             placeholder = "RotorGene Q CSV export"),
-            shiny::uiOutput(ns("mqc_file_status"))
+      shiny::div(class = "sticky-tool",
+        shiny::fluidRow(
+          shiny::column(4,
+            shiny::div(class = "workflow-col",
+              lab_card(
+                step_title(1, "Upload Data File"),
+                info_box("Same file format as Simple mode. Re-use an already uploaded file by switching modes without re-uploading."),
+                shiny::fileInput(ns("mqc_file"), NULL, accept = ".csv",
+                                 buttonLabel = "Browse\u2026",
+                                 placeholder = "RotorGene Q CSV export"),
+                shiny::uiOutput(ns("mqc_file_status"))
+              ),
+              lab_card(
+                step_title(2, "Select Samples"),
+                info_box("Select 3\u201310 samples. Colours are assigned automatically from a qualitative palette."),
+                shiny::uiOutput(ns("mqc_sample_select_ui"))
+              ),
+              lab_card(
+                step_title(3, "Sample Labels"),
+                info_box("Optionally override the default sample names for cleaner plots."),
+                shiny::uiOutput(ns("mqc_labels_ui"))
+              ),
+              lab_card(
+                step_title(4, "Plot Settings"),
+                shiny::textInput(ns("mqc_title"), "Plot title",
+                                 placeholder = "e.g. HsUCP1 Multi-Ligand QC"),
+                shiny::numericInput(ns("mqc_linewidth"), "Line width",
+                                    value = 1.5, min = 0.5, max = 4, step = 0.25)
+              ),
+              lab_card(
+                step_title(5, "Generate"),
+                shiny::actionButton(ns("mqc_run"), "\u25b6  Generate QC Plots", class = "btn-run"),
+                shiny::br(), shiny::br(),
+                shiny::uiOutput(ns("mqc_download_buttons"))
+              )
+            )  # close workflow-col
           ),
-          lab_card(
-            step_title(2, "Select Samples"),
-            info_box("Select 3\u201310 samples. Colours are assigned automatically from a qualitative palette."),
-            shiny::uiOutput(ns("mqc_sample_select_ui"))
-          ),
-          lab_card(
-            step_title(3, "Sample Labels"),
-            info_box("Optionally override the default sample names for cleaner plots."),
-            shiny::uiOutput(ns("mqc_labels_ui"))
-          ),
-          lab_card(
-            step_title(4, "Plot Settings"),
-            shiny::textInput(ns("mqc_title"), "Plot title",
-                             placeholder = "e.g. HsUCP1 Multi-Ligand QC"),
-            shiny::numericInput(ns("mqc_linewidth"), "Line width",
-                                value = 1.5, min = 0.5, max = 4, step = 0.25)
-          ),
-          lab_card(
-            step_title(5, "Generate"),
-            shiny::actionButton(ns("mqc_run"), "\u25b6  Generate QC Plots", class = "btn-run"),
-            shiny::br(), shiny::br(),
-            shiny::uiOutput(ns("mqc_download_buttons"))
-          )
-        ),
-        shiny::column(8,
-          shiny::uiOutput(ns("mqc_badges")),
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f321\ufe0f  Raw Fluorescence"),
-            shiny::uiOutput(ns("mqc_raw_placeholder")),
-            shiny::plotOutput(ns("mqc_raw_plot"), height = "300px")
-          ),
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f4c8  dF/dT (unnormalised)"),
-            shiny::plotOutput(ns("mqc_dfdt_plot"), height = "300px")
-          ),
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f4ca  Tm Comparison"),
-            shiny::plotOutput(ns("mqc_tm_plot"), height = "320px")
+          shiny::column(8,
+            shiny::div(class = "preview-col",
+              shiny::uiOutput(ns("mqc_badges")),
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f321\ufe0f  Raw Fluorescence"),
+                shiny::uiOutput(ns("mqc_raw_placeholder")),
+                shiny::plotOutput(ns("mqc_raw_plot"), height = "300px")
+              ),
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f4c8  dF/dT (unnormalised)"),
+                shiny::plotOutput(ns("mqc_dfdt_plot"), height = "300px")
+              ),
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f4ca  Tm Comparison"),
+                shiny::plotOutput(ns("mqc_tm_plot"), height = "320px")
+              )
+            )  # close preview-col
           )
         )
       )
@@ -229,14 +241,38 @@ cpm_qc_server <- function(id) {
     mqc_data    <- shiny::reactiveVal(NULL)
     mqc_results <- shiny::reactiveVal(NULL)
 
-    # ---- Clear all (both modes) -----------------------------------------
-    shiny::observeEvent(input$clear, {
-      qc_data(NULL);  qc_results(NULL)
+    # current_file_simple / current_file_multi mirror AKTA/BCA's pattern:
+    # a single source of truth for "which file is loaded?" with the shape
+    # data.frame(name, datapath). Both modes have their OWN current_file
+    # so switching modes doesn't wipe the other mode's loaded data.
+    current_file_simple <- shiny::reactiveVal(NULL)
+    current_file_multi  <- shiny::reactiveVal(NULL)
+
+    # Internal helpers to wipe per-mode state. Called on new uploads and
+    # by the navbar Clear button.
+    .clear_simple_state <- function(reset_inputs = TRUE) {
+      qc_data(NULL); qc_results(NULL)
+      if (reset_inputs) {
+        for (i in c("label_a", "label_b", "title"))
+          shinyjs::reset(i)
+        shiny::updateNumericInput(session, "tm_a", value = NA)
+        shiny::updateNumericInput(session, "tm_b", value = NA)
+      }
+    }
+    .clear_multi_state <- function(reset_inputs = TRUE) {
       mqc_data(NULL); mqc_results(NULL)
-      for (i in c("file","mqc_file","label_a","label_b","title","mqc_title"))
-        shinyjs::reset(i)
-      shiny::updateNumericInput(session, "tm_a", value = NA)
-      shiny::updateNumericInput(session, "tm_b", value = NA)
+      if (reset_inputs) shinyjs::reset("mqc_title")
+    }
+
+    # ---- Clear button (still in DOM, fired by global navbar Clear) -----
+    # Wipes both modes' state and reloads the bundled example files so
+    # the previews are never empty after clearing. Same pattern as
+    # AKTA and BCA.
+    shiny::observeEvent(input$clear, {
+      current_file_simple(NULL); current_file_multi(NULL)
+      .clear_simple_state(); .clear_multi_state()
+      tryCatch(.load_example_simple(), error = function(e) NULL)
+      tryCatch(.load_example_multi(),  error = function(e) NULL)
       shiny::showNotification("CPM QC data cleared", type = "message", duration = 2)
     })
 
@@ -245,13 +281,23 @@ cpm_qc_server <- function(id) {
     # SIMPLE MODE
     # =====================================================================
 
+    # Upload routes through current_file_simple, which then triggers the
+    # parse + auto-run cascade below. Wiping state on new upload prevents
+    # stale tm_a/tm_b/labels from carrying over to a different dataset.
     shiny::observeEvent(input$file, {
-      shiny::req(input$file)
-      qc_results(NULL)
+      .clear_simple_state()
+      current_file_simple(input$file)
+    }, ignoreInit = TRUE)
+
+    # Parse whatever's in current_file_simple. Single observer means
+    # both upload and example-load paths share identical parse logic.
+    shiny::observeEvent(current_file_simple(), {
+      cf <- current_file_simple()
+      shiny::req(cf)
       tryCatch({
-        qc_data(read_rotorgene_csv_full(input$file$datapath))
+        qc_data(read_rotorgene_csv_full(cf$datapath))
       }, error = function(e) qc_data(list(error = conditionMessage(e))))
-    })
+    }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
     output$file_status <- shiny::renderUI({
       shiny::req(qc_data())
@@ -310,15 +356,17 @@ cpm_qc_server <- function(id) {
                 if (is.na(tm_b)) 0 else tm_b))
     })
 
-    # ---- Generate plots --------------------------------------------------
-    shiny::observeEvent(input$run, {
-      shiny::req(qc_data(), input$sample_a, input$sample_b)
+    # ---- Simple-mode plot generation -------------------------------------
+    # Extracted into a helper so we can fire it from:
+    #   - user clicks "Generate QC Plots" (input$run)
+    #   - auto-run after a successful parse, once sample_a/sample_b are bound
+    .run_simple <- function() {
       d <- qc_data()
-      if (!is.null(d$error)) {
-        shiny::showNotification(d$error, type = "error"); return()
-      }
-      idx_a <- which(d$sample_ids == input$sample_a)[1]
-      idx_b <- which(d$sample_ids == input$sample_b)[1]
+      if (is.null(d) || !is.null(d$error)) return(invisible())
+      sa <- input$sample_a; sb <- input$sample_b
+      if (is.null(sa) || is.null(sb)) return(invisible())
+      idx_a <- which(d$sample_ids == sa)[1]
+      idx_b <- which(d$sample_ids == sb)[1]
       if (is.na(idx_a) || is.na(idx_b)) {
         shiny::showNotification("Could not find selected samples in file.",
                                 type = "error"); return()
@@ -337,20 +385,22 @@ cpm_qc_server <- function(id) {
         return()
       }
 
-      lbl_a <- if (nchar(trimws(input$label_a)) > 0) trimws(input$label_a)
+      lbl_a <- if (nchar(trimws(input$label_a %||% "")) > 0) trimws(input$label_a)
                else d$sample_names[idx_a]
-      lbl_b <- if (nchar(trimws(input$label_b)) > 0) trimws(input$label_b)
+      lbl_b <- if (nchar(trimws(input$label_b %||% "")) > 0) trimws(input$label_b)
                else d$sample_names[idx_b]
       col_a <- if (!is.null(input$col_a) && nchar(input$col_a) > 0) input$col_a
                else "#E41A1C"
       col_b <- if (!is.null(input$col_b) && nchar(input$col_b) > 0) input$col_b
                else "#377EB8"
-      lw    <- input$linewidth
-      title <- trimws(input$title)
+      lw    <- input$linewidth %||% 1.5
+      title <- trimws(input$title %||% "")
 
       auto_tm <- function(idx) round(d$temperature[which.max(d$data[, idx])], 2)
-      tm_a <- if (!is.na(input$tm_a) && input$tm_a > 0) input$tm_a else auto_tm(idx_a)
-      tm_b <- if (!is.na(input$tm_b) && input$tm_b > 0) input$tm_b else auto_tm(idx_b)
+      tm_a <- if (!is.null(input$tm_a) && !is.na(input$tm_a) && input$tm_a > 0)
+                input$tm_a else auto_tm(idx_a)
+      tm_b <- if (!is.null(input$tm_b) && !is.na(input$tm_b) && input$tm_b > 0)
+                input$tm_b else auto_tm(idx_b)
 
       raw_df  <- rbind(
         stats::na.omit(data.frame(Temperature = d$raw_temperature,
@@ -370,7 +420,6 @@ cpm_qc_server <- function(id) {
       )
       pal <- stats::setNames(c(col_a, col_b), c(lbl_a, lbl_b))
 
-      # Resolve legend position from select input
       leg_choice <- input$legend_pos %||% "topright"
       leg_pos  <- switch(leg_choice,
         topright = c(0.98, 0.98), topleft = c(0.02, 0.98),
@@ -449,6 +498,28 @@ cpm_qc_server <- function(id) {
       qc_results(list(p_raw  = p_raw,  p_dfdt = p_dfdt,  p_tm = p_tm,
                       tm_a   = tm_a,   tm_b   = tm_b,
                       lbl_a  = lbl_a,  lbl_b  = lbl_b,   title = title))
+    }
+
+    # Trigger 1: user clicked "Generate QC Plots"
+    shiny::observeEvent(input$run, .run_simple())
+
+    # Trigger 2: auto-run when both data and sample selections are ready.
+    # The sample dropdowns are rendered AFTER qc_data() is set (via the
+    # renderUI for sample_a_ui/sample_b_ui), so we can't auto-run from
+    # observeEvent(qc_data()) directly - input$sample_a wouldn't be bound
+    # yet. Instead use an observe() that depends on both qc_data() and
+    # the sample inputs, plus a "pending" flag we set when data changes
+    # to ensure we only auto-run once per upload.
+    .simple_pending_run <- shiny::reactiveVal(FALSE)
+    shiny::observeEvent(qc_data(), {
+      d <- qc_data()
+      if (!is.null(d) && is.null(d$error)) .simple_pending_run(TRUE)
+    }, ignoreInit = TRUE)
+    shiny::observe({
+      if (!isTRUE(.simple_pending_run())) return()
+      shiny::req(qc_data(), input$sample_a, input$sample_b)
+      .simple_pending_run(FALSE)
+      .run_simple()
     })
 
     # ---- Simple mode outputs --------------------------------------------
@@ -518,12 +589,17 @@ cpm_qc_server <- function(id) {
     # =====================================================================
 
     shiny::observeEvent(input$mqc_file, {
-      shiny::req(input$mqc_file)
-      mqc_results(NULL)
+      .clear_multi_state()
+      current_file_multi(input$mqc_file)
+    }, ignoreInit = TRUE)
+
+    shiny::observeEvent(current_file_multi(), {
+      cf <- current_file_multi()
+      shiny::req(cf)
       tryCatch({
-        mqc_data(read_rotorgene_csv_full(input$mqc_file$datapath))
+        mqc_data(read_rotorgene_csv_full(cf$datapath))
       }, error = function(e) mqc_data(list(error = conditionMessage(e))))
-    })
+    }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
     output$mqc_file_status <- shiny::renderUI({
       shiny::req(mqc_data())
@@ -587,22 +663,20 @@ cpm_qc_server <- function(id) {
       shiny::tagList(rows)
     })
 
-    # ---- Generate multi-sample plots ------------------------------------
-    shiny::observeEvent(input$mqc_run, {
-      shiny::req(mqc_data(), input$samples)
-      d    <- mqc_data()
+    # ---- Multi-mode plot generation -------------------------------------
+    .run_multi <- function() {
+      d <- mqc_data()
+      if (is.null(d) || !is.null(d$error)) return(invisible())
       sids <- input$samples
-      n    <- length(sids)
+      if (is.null(sids) || length(sids) == 0) return(invisible())
+      n <- length(sids)
 
-      if (!is.null(d$error)) {
-        shiny::showNotification(d$error, type = "error"); return()
-      }
       if (n < 2)  { shiny::showNotification("Select at least 2 samples.", type = "warning"); return() }
       if (n > 10) { shiny::showNotification("Maximum 10 samples.",        type = "warning"); return() }
 
       cols  <- .MQC_PALETTE[seq_len(n)]
-      title <- trimws(input$mqc_title)
-      lw    <- input$mqc_linewidth
+      title <- trimws(input$mqc_title %||% "")
+      lw    <- input$mqc_linewidth %||% 1.5
 
       labels <- sapply(seq_len(n), function(i) {
         ov  <- trimws(input[[paste0("mqc_lbl_", i)]] %||% "")
@@ -671,6 +745,26 @@ cpm_qc_server <- function(id) {
 
       mqc_results(list(p_raw = p_raw, p_dfdt = p_dfdt, p_tm = p_tm,
                        tms = tms, labels = labels, title = title, n = n))
+    }
+
+    # Trigger 1: user clicked "Generate QC Plots" (multi)
+    shiny::observeEvent(input$mqc_run, .run_multi())
+
+    # Trigger 2: auto-run when both data and sample selections are ready.
+    # Same flag pattern as simple mode - the multi-select dropdown is
+    # rendered AFTER mqc_data() is set, so we can't auto-fire directly
+    # from observeEvent(mqc_data()).
+    .multi_pending_run <- shiny::reactiveVal(FALSE)
+    shiny::observeEvent(mqc_data(), {
+      d <- mqc_data()
+      if (!is.null(d) && is.null(d$error)) .multi_pending_run(TRUE)
+    }, ignoreInit = TRUE)
+    shiny::observe({
+      if (!isTRUE(.multi_pending_run())) return()
+      shiny::req(mqc_data(), input$samples)
+      if (length(input$samples) < 2) return()
+      .multi_pending_run(FALSE)
+      .run_multi()
     })
 
     output$mqc_badges <- shiny::renderUI({
@@ -741,6 +835,29 @@ cpm_qc_server <- function(id) {
           Date     = Sys.time()
         ), file, row.names = FALSE)
       })
+
+    # ---- Trigger 3: session start with bundled examples ----------------
+    # One observer per mode. Same one-shot self-destruct pattern used in
+    # AKTA and BCA. Each loader sets its mode's current_file, which
+    # cascades through parse -> renderUI(sample selectors) -> auto-run.
+    .load_example_simple <- function() {
+      cf <- .cpm_qc_simple_example_file()
+      if (!is.null(cf)) current_file_simple(cf)
+    }
+    .load_example_multi <- function() {
+      cf <- .cpm_qc_multi_example_file()
+      if (!is.null(cf)) current_file_multi(cf)
+    }
+    .example_simple_obs <- shiny::observe({
+      .example_simple_obs$destroy()
+      tryCatch(.load_example_simple(), error = function(e)
+        message("[CPM QC simple] example load failed: ", conditionMessage(e)))
+    })
+    .example_multi_obs <- shiny::observe({
+      .example_multi_obs$destroy()
+      tryCatch(.load_example_multi(), error = function(e)
+        message("[CPM QC multi] example load failed: ", conditionMessage(e)))
+    })
 
     # ---- Public reactive ------------------------------------------------
     shiny::reactive({
@@ -842,4 +959,53 @@ cpm_qc_server <- function(id) {
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.08, 0.12))) +
     ggplot2::labs(title = if (nchar(title) > 0) paste(title, "dF/dT") else NULL,
                   x = "Temperature (\u00b0C)", y = "dF/dT")
+}
+
+# ---- Example data loaders --------------------------------------------------
+# Two RotorGene Q exports bundled with the app, one per mode:
+#   - simple: 7 samples, defaults to comparing samples [1] and [2]
+#   - multi:  8 samples, all selected by default
+# Each is a small (<25 KB) plain-text CSV so we just copy to tempdir
+# rather than bothering with compression. Caches are per-loader so
+# revisits don't redo the copy.
+.cpm_qc_simple_example_cache <- new.env(parent = emptyenv())
+.cpm_qc_multi_example_cache  <- new.env(parent = emptyenv())
+
+.cpm_qc_example_file_loader <- function(cache_env, basename_file, display_name) {
+  if (!is.null(cache_env$path) && file.exists(cache_env$path)) {
+    return(data.frame(name = display_name, datapath = cache_env$path,
+                      stringsAsFactors = FALSE))
+  }
+  app_dir_local <- if (exists("app_dir", envir = globalenv())) {
+    get("app_dir", envir = globalenv())
+  } else getwd()
+  candidates <- unique(c(
+    file.path(app_dir_local, "inst", "examples", basename_file),
+    file.path(getwd(),       "inst", "examples", basename_file),
+    file.path("inst", "examples", basename_file)
+  ))
+  src <- candidates[file.exists(candidates)][1]
+  if (is.na(src)) return(NULL)
+  tryCatch({
+    out <- file.path(tempdir(), display_name)
+    file.copy(src, out, overwrite = TRUE)
+    cache_env$path <- out
+    data.frame(name = display_name, datapath = out, stringsAsFactors = FALSE)
+  }, error = function(e) NULL)
+}
+
+.cpm_qc_simple_example_file <- function() {
+  .cpm_qc_example_file_loader(
+    .cpm_qc_simple_example_cache,
+    "cpm_qc_simple_example.csv",
+    "251210_HsUCP1_QC_ug_Screen_Transpose.csv"
+  )
+}
+
+.cpm_qc_multi_example_file <- function() {
+  .cpm_qc_example_file_loader(
+    .cpm_qc_multi_example_cache,
+    "cpm_qc_multi_example.csv",
+    "251203_HsUCP1_NB65_GDP_Binding_Minus2_Gain_Low_Salt_rep2_Transpose.csv"
+  )
 }

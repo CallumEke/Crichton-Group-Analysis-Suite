@@ -31,114 +31,123 @@ cpm_contour_ui <- function(id) {
   ns <- shiny::NS(id)
 
   shiny::tagList(
-    shiny::div(class = "clear-button-container",
+    shiny::div(style = "display: none;",
       shiny::actionButton(ns("clear"), "\U0001f504  Clear All Data", class = "btn-clear")
     ),
 
-    shiny::fluidRow(
-      # ----- Left sidebar: uploads + pairing ------------------------------
-      shiny::column(3,
-        lab_card(
-          step_title(1, "Upload dF/dT Data"),
-          info_box(paste("Upload CSV file exported from GraphPad Prism",
-                         "containing dF/dT data with replicate samples.")),
-          shiny::fileInput(ns("dfdt_file"), NULL, accept = c(".csv"),
-                           buttonLabel = "Browse\u2026",
-                           placeholder = "No dF/dT file selected"),
-          shiny::uiOutput(ns("dfdt_status"))
-        ),
-        lab_card(
-          step_title(2, "Upload Tm Data"),
-          info_box("Upload CSV file containing Tm scatter data for the same samples."),
-          shiny::fileInput(ns("tm_file"), NULL, accept = c(".csv"),
-                           buttonLabel = "Browse\u2026",
-                           placeholder = "No Tm file selected"),
-          shiny::uiOutput(ns("tm_status"))
-        ),
-        lab_card(
-          step_title(3, "Match Tm to Samples"),
-          info_box("Match each Tm concentration to its corresponding dF/dT sample."),
-          shiny::uiOutput(ns("tm_pairing_ui"))
-        )
-      ),
-
-      # ----- Middle: visualisations ---------------------------------------
-      shiny::column(6,
-        lab_card(
-          shiny::div(class = "lab-card-title", "\U0001f4c8  dF/dT Heatmap"),
-          shiny::plotOutput(ns("heatmap"), height = "450px")
-        ),
-        lab_card(
-          shiny::div(class = "lab-card-title", "\U0001f321\ufe0f  Tm vs. Concentration"),
-          shiny::plotOutput(ns("tm_plot"), height = "340px")
-        )
-      ),
-
-      # ----- Right sidebar: stats / process / settings / export -----------
-      shiny::column(3,
-        lab_card(
-          shiny::div(class = "lab-card-title", "\U0001f4ca  Sample Statistics"),
-          shiny::div(style = "max-height:200px;overflow-y:auto;padding-right:4px;",
-            shiny::uiOutput(ns("stats_ui")))
-        ),
-        lab_card(
-          shiny::div(class = "lab-card-title", "\U0001f321\ufe0f  Tm Summary"),
-          shiny::div(style = "max-height:200px;overflow-y:auto;padding-right:4px;",
-            shiny::uiOutput(ns("tm_summary")))
-        ),
-        lab_card(
-          step_title(4, "Process Data"),
-          shiny::actionButton(ns("process"), "\U0001f52c  Calculate Mean & SEM",
-                              class = "btn-run"),
-          shiny::br(), shiny::br(),
-          shiny::uiOutput(ns("sample_count"))
-        ),
-        lab_card(
-          shiny::div(class = "lab-card-title", "\U0001f3a8  Plot Settings"),
-          shiny::tags$label("dF/dT colour palette",
-                            style = "color:var(--muted);font-size:0.78rem;"),
-          shiny::selectInput(ns("palette"), NULL,
-            choices = c(
-              "Grayscale (white \U2192 black)" = "grayscale",
-              "Inferno (dark \U2192 yellow)"   = "inferno",
-              "Magma (dark \U2192 white)"      = "magma",
-              "Viridis (dark \U2192 yellow)"   = "viridis",
-              "Plasma (dark \U2192 pink)"      = "plasma",
-              "Blue \U2192 White \U2192 Red"   = "RdBu",
-              "Yellow \U2192 Orange \U2192 Red"= "YlOrRd"),
-            selected = "grayscale", width = "100%"),
-          shiny::br(),
-          shiny::tags$label("Intensity threshold",
-                            style = "color:var(--muted);font-size:0.78rem;"),
-          info_box(paste("Values below this threshold are shown as background colour.",
-                         "Remaining values are rescaled to use the full palette.")),
-          shiny::sliderInput(ns("threshold"), NULL,
-                             min = 0, max = 0.95, value = 0, step = 0.05,
-                             width = "100%"),
-          shiny::br(),
-          shiny::tags$button("\u2705  Temperature Range", class = "adv-toggle",
-            onclick = sprintf("$('#%s').slideToggle(200)", ns("yrange_panel"))),
-          shiny::div(id = ns("yrange_panel"), style = "display:none;",
-            shiny::div(class = "settings-group",
-              shiny::div(class = "settings-group-title",
-                         "Tm Plot Y-Axis Range (\u00b0C)"),
-              shiny::div(style = "font-size:0.75rem;color:var(--muted);margin-bottom:0.5rem;",
-                "Full data range shown by default. Adjust to zoom in on a specific region."),
-              shiny::fluidRow(
-                shiny::column(6, shiny::numericInput(ns("ymin"), "Min",
-                                                     value = 25.5, step = 1, width = "100%")),
-                shiny::column(6, shiny::numericInput(ns("ymax"), "Max",
-                                                     value = 89.5, step = 1, width = "100%")))
+    shiny::div(class = "sticky-tool",
+      shiny::fluidRow(
+        # ----- Left column: workflow (scrolls) --------------------------
+        shiny::column(3,
+          shiny::div(class = "workflow-col",
+            lab_card(
+              step_title(1, "Upload dF/dT Data"),
+              info_box(paste("Upload CSV file exported from GraphPad Prism",
+                             "containing dF/dT data with replicate samples.")),
+              shiny::fileInput(ns("dfdt_file"), NULL, accept = c(".csv"),
+                               buttonLabel = "Browse\u2026",
+                               placeholder = "No dF/dT file selected"),
+              shiny::uiOutput(ns("dfdt_status"))
+            ),
+            lab_card(
+              step_title(2, "Upload Tm Data"),
+              info_box("Upload CSV file containing Tm scatter data for the same samples."),
+              shiny::fileInput(ns("tm_file"), NULL, accept = c(".csv"),
+                               buttonLabel = "Browse\u2026",
+                               placeholder = "No Tm file selected"),
+              shiny::uiOutput(ns("tm_status"))
+            ),
+            lab_card(
+              step_title(3, "Match Tm to Samples"),
+              info_box("Match each Tm concentration to its corresponding dF/dT sample."),
+              shiny::uiOutput(ns("tm_pairing_ui"))
+            ),
+            lab_card(
+              step_title(4, "Plot Settings"),
+              shiny::tags$label("dF/dT colour palette",
+                                style = "color:var(--muted);font-size:0.78rem;"),
+              shiny::selectInput(ns("palette"), NULL,
+                choices = c(
+                  "Grayscale (white \U2192 black)" = "grayscale",
+                  "Inferno (dark \U2192 yellow)"   = "inferno",
+                  "Magma (dark \U2192 white)"      = "magma",
+                  "Viridis (dark \U2192 yellow)"   = "viridis",
+                  "Plasma (dark \U2192 pink)"      = "plasma",
+                  "Blue \U2192 White \U2192 Red"   = "RdBu",
+                  "Yellow \U2192 Orange \U2192 Red"= "YlOrRd"),
+                selected = "grayscale", width = "100%"),
+              shiny::br(),
+              shiny::tags$label("Intensity threshold",
+                                style = "color:var(--muted);font-size:0.78rem;"),
+              info_box(paste("Values below this threshold are shown as background colour.",
+                             "Remaining values are rescaled to use the full palette.")),
+              shiny::sliderInput(ns("threshold"), NULL,
+                                 min = 0, max = 0.95, value = 0, step = 0.05,
+                                 width = "100%"),
+              shiny::br(),
+              shiny::tags$button("\u2705  Temperature Range", class = "adv-toggle",
+                onclick = sprintf("$('#%s').slideToggle(200)", ns("yrange_panel"))),
+              shiny::div(id = ns("yrange_panel"), style = "display:none;",
+                shiny::div(class = "settings-group",
+                  shiny::div(class = "settings-group-title",
+                             "Tm Plot Y-Axis Range (\u00b0C)"),
+                  shiny::div(style = "font-size:0.75rem;color:var(--muted);margin-bottom:0.5rem;",
+                    "Full data range shown by default. Adjust to zoom in on a specific region."),
+                  shiny::fluidRow(
+                    shiny::column(6, shiny::numericInput(ns("ymin"), "Min",
+                                                         value = 25.5, step = 1, width = "100%")),
+                    shiny::column(6, shiny::numericInput(ns("ymax"), "Max",
+                                                         value = 89.5, step = 1, width = "100%")))
+                )
+              )
+            ),
+            # The Analyse box (last in the left column) combines what used
+            # to be separate "Process Data" and "Export" cards. Putting
+            # them together matches the pattern used by every other tool -
+            # the run button sits above the export buttons since you can
+            # only export after analysis succeeds.
+            lab_card(
+              step_title(5, "Analyse"),
+              shiny::actionButton(ns("process"), "\u25b6  Run Analysis",
+                                  class = "btn-run"),
+              shiny::br(), shiny::br(),
+              shiny::uiOutput(ns("sample_count")),
+              shiny::br(),
+              shiny::downloadButton(ns("export_stats"),   "\u2b07 Statistics CSV", class = "btn-download"),
+              shiny::br(), shiny::br(),
+              shiny::downloadButton(ns("export_heatmap"), "\u2b07 Heatmap PNG",    class = "btn-download"),
+              shiny::br(), shiny::br(),
+              shiny::downloadButton(ns("export_tmplot"),  "\u2b07 Tm Plot PNG",    class = "btn-download")
             )
-          )
+          )  # close workflow-col
         ),
-        lab_card(
-          shiny::div(class = "lab-card-title", "\U0001f4e5  Export"),
-          shiny::downloadButton(ns("export_stats"),   "\u2b07 Statistics CSV", class = "btn-download"),
-          shiny::br(), shiny::br(),
-          shiny::downloadButton(ns("export_heatmap"), "\u2b07 Heatmap PNG",    class = "btn-download"),
-          shiny::br(), shiny::br(),
-          shiny::downloadButton(ns("export_tmplot"),  "\u2b07 Tm Plot PNG",    class = "btn-download")
+
+        # ----- Middle column: previews (sticky) ------------------------
+        shiny::column(7,
+          shiny::div(class = "preview-col",
+            lab_card(
+              shiny::div(class = "lab-card-title", "\U0001f4c8  dF/dT Heatmap"),
+              shiny::plotOutput(ns("heatmap"), height = "450px")
+            ),
+            lab_card(
+              shiny::div(class = "lab-card-title", "\U0001f321\ufe0f  Tm vs. Concentration"),
+              shiny::plotOutput(ns("tm_plot"), height = "340px")
+            )
+          )  # close preview-col
+        ),
+
+        # ----- Right column: stats outputs (scrolls) ------------------
+        shiny::column(2,
+          shiny::div(class = "workflow-col",
+            lab_card(
+              shiny::div(class = "lab-card-title", "\U0001f4ca  Sample Statistics"),
+              shiny::uiOutput(ns("stats_ui"))
+            ),
+            lab_card(
+              shiny::div(class = "lab-card-title", "\U0001f321\ufe0f  Tm Summary"),
+              shiny::uiOutput(ns("tm_summary"))
+            )
+          )  # close workflow-col
         )
       )
     )
@@ -165,79 +174,131 @@ cpm_contour_server <- function(id) {
     )
 
     # =====================================================================
-    # File uploads
+    # State sources of truth
+    # =====================================================================
+    # Mirrors AKTA/BCA/CPM-QC pattern: a current_*_file reactive per upload
+    # input so the rest of the code reads from one place, populated either
+    # by user upload OR by the example loader on session start.
+    current_dfdt_file <- shiny::reactiveVal(NULL)
+    current_tm_file   <- shiny::reactiveVal(NULL)
+
+    # =====================================================================
+    # Parsing helpers - extracted so the upload observers and example
+    # loader share identical parse logic.
+    # =====================================================================
+    .parse_dfdt <- function(path) {
+      raw_data <- utils::read.csv(path,
+                                  stringsAsFactors = FALSE,
+                                  check.names      = FALSE,
+                                  fileEncoding     = "UTF-8-BOM")
+      temperatures <- as.numeric(raw_data[, 1])
+      temperatures <- temperatures[!is.na(temperatures)]
+      sample_names <- colnames(raw_data)[-1]
+      dfdt_values <- as.data.frame(lapply(raw_data[, -1, drop = FALSE],
+                                          as.numeric))
+      dfdt_values <- dfdt_values[seq_len(length(temperatures)), ,
+                                 drop = FALSE]
+      colnames(dfdt_values) <- sample_names
+      list(temperatures = temperatures,
+           sample_names = sample_names,
+           values       = dfdt_values)
+    }
+
+    .parse_tm <- function(path) {
+      raw_data <- utils::read.csv(path,
+                                  stringsAsFactors = FALSE,
+                                  check.names      = FALSE,
+                                  fileEncoding     = "UTF-8-BOM")
+      concentrations <- as.character(raw_data[, 1])
+      n_rows         <- nrow(raw_data)
+      tm_values <- list()
+      tm_means  <- numeric(n_rows)
+      tm_sems   <- numeric(n_rows)
+      for (i in seq_len(n_rows)) {
+        values <- as.numeric(raw_data[i, -1])
+        values <- values[!is.na(values)]
+        tm_values[[i]] <- values
+        tm_means[i]    <- if (length(values) > 0) mean(values) else NA
+        tm_sems[i]     <- if (length(values) > 1)
+                            stats::sd(values) / sqrt(length(values))
+                          else 0
+      }
+      list(concentrations = concentrations,
+           values         = tm_values,
+           means          = tm_means,
+           sems           = tm_sems,
+           n_rows         = n_rows)
+    }
+
+    # =====================================================================
+    # Internal: clear all derived state. Called on new uploads and
+    # by the navbar Clear button.
+    # =====================================================================
+    .clear_state <- function() {
+      state$dfdt_raw       <- NULL
+      state$tm_raw         <- NULL
+      state$dfdt_processed <- NULL
+      state$tm_processed   <- NULL
+      state$sample_names   <- NULL
+      state$temperatures   <- NULL
+      state$tm_pairing     <- NULL
+    }
+
+    # =====================================================================
+    # File uploads route through current_*_file -> observer parses
     # =====================================================================
 
     shiny::observeEvent(input$dfdt_file, {
-      shiny::req(input$dfdt_file)
+      # New dFdT file invalidates everything downstream - including any
+      # processed matrices and the Tm pairing (sample names will differ).
+      .clear_state()
+      current_dfdt_file(input$dfdt_file)
+    }, ignoreInit = TRUE)
+
+    shiny::observeEvent(input$tm_file, {
+      # New Tm file only invalidates the Tm side: keep the dfdt_raw if
+      # one is already loaded. But clear the pairing because row count
+      # may differ.
+      state$tm_raw       <- NULL
+      state$tm_processed <- NULL
+      state$tm_pairing   <- NULL
+      current_tm_file(input$tm_file)
+    }, ignoreInit = TRUE)
+
+    # Parse observers - single path for both upload and example load.
+    shiny::observeEvent(current_dfdt_file(), {
+      cf <- current_dfdt_file()
+      shiny::req(cf)
       tryCatch({
-        raw_data <- utils::read.csv(input$dfdt_file$datapath,
-                                    stringsAsFactors = FALSE,
-                                    check.names      = FALSE,
-                                    fileEncoding     = "UTF-8-BOM")
-        temperatures <- as.numeric(raw_data[, 1])
-        temperatures <- temperatures[!is.na(temperatures)]
-        sample_names <- colnames(raw_data)[-1]
-
-        dfdt_values <- as.data.frame(lapply(raw_data[, -1, drop = FALSE],
-                                            as.numeric))
-        dfdt_values <- dfdt_values[seq_len(length(temperatures)), ,
-                                   drop = FALSE]
-        colnames(dfdt_values) <- sample_names
-
-        state$dfdt_raw <- list(temperatures = temperatures,
-                               sample_names = sample_names,
-                               values       = dfdt_values)
-        n_unique <- length(unique(sample_names))
-        n_reps   <- as.integer(table(sample_names)[1])
+        parsed <- .parse_dfdt(cf$datapath)
+        state$dfdt_raw <- parsed
+        n_unique <- length(unique(parsed$sample_names))
+        n_reps   <- as.integer(table(parsed$sample_names)[1])
         shiny::showNotification(
           sprintf("\u2713 dF/dT loaded: %d samples \u00d7 %d replicates, %d temps",
-                  n_unique, n_reps, length(temperatures)),
+                  n_unique, n_reps, length(parsed$temperatures)),
           type = "message", duration = 3)
       }, error = function(e) {
         shiny::showNotification(paste("Error reading dF/dT file:", e$message),
                                 type = "error", duration = 5)
       })
-    })
+    }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
-    shiny::observeEvent(input$tm_file, {
-      shiny::req(input$tm_file)
+    shiny::observeEvent(current_tm_file(), {
+      cf <- current_tm_file()
+      shiny::req(cf)
       tryCatch({
-        raw_data <- utils::read.csv(input$tm_file$datapath,
-                                    stringsAsFactors = FALSE,
-                                    check.names      = FALSE,
-                                    fileEncoding     = "UTF-8-BOM")
-        concentrations <- as.character(raw_data[, 1])
-        n_rows         <- nrow(raw_data)
-
-        tm_values <- list()
-        tm_means  <- numeric(n_rows)
-        tm_sems   <- numeric(n_rows)
-        for (i in seq_len(n_rows)) {
-          values <- as.numeric(raw_data[i, -1])
-          values <- values[!is.na(values)]
-          tm_values[[i]] <- values
-          tm_means[i]    <- if (length(values) > 0) mean(values) else NA
-          tm_sems[i]     <- if (length(values) > 1)
-                              stats::sd(values) / sqrt(length(values))
-                            else 0
-        }
-
-        state$tm_raw <- list(concentrations = concentrations,
-                             values         = tm_values,
-                             means          = tm_means,
-                             sems           = tm_sems,
-                             n_rows         = n_rows)
-        # New Tm file invalidates any prior pairing
+        parsed <- .parse_tm(cf$datapath)
+        state$tm_raw     <- parsed
         state$tm_pairing <- NULL
-
-        shiny::showNotification(sprintf("\u2713 Tm loaded: %d conditions", n_rows),
-                                type = "message", duration = 3)
+        shiny::showNotification(
+          sprintf("\u2713 Tm loaded: %d conditions", parsed$n_rows),
+          type = "message", duration = 3)
       }, error = function(e) {
         shiny::showNotification(paste("Error reading Tm file:", e$message),
                                 type = "error", duration = 5)
       })
-    })
+    }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
     # =====================================================================
     # Pairing UI - one selectInput per Tm row
@@ -273,10 +334,12 @@ cpm_contour_server <- function(id) {
     })
 
     # =====================================================================
-    # Process: compute mean & SEM dF/dT matrices, record pairing
+    # Analysis core - extracted into a helper so we can call it from:
+    #   - user clicks "Run Analysis" (input$process)
+    #   - auto-run when dfdt/tm/pairing are all ready (e.g. example load)
     # =====================================================================
-    shiny::observeEvent(input$process, {
-      shiny::req(state$dfdt_raw)
+    .run_analysis <- function() {
+      if (is.null(state$dfdt_raw)) return(invisible())
       tryCatch({
         temperatures <- state$dfdt_raw$temperatures
         sample_names <- state$dfdt_raw$sample_names
@@ -331,7 +394,11 @@ cpm_contour_server <- function(id) {
                                      sem          = sem_matrix,
                                      n            = n_matrix)
 
-        # Collect Tm pairing from the selectInputs the user has touched
+        # Collect Tm pairing from the selectInputs the user has touched.
+        # For the example-load case, .auto_pair_example_samples() sets
+        # state$tm_pairing programmatically so the selectInputs render
+        # with the right defaults - by the time .run_analysis() reads
+        # the inputs they reflect those defaults.
         if (!is.null(state$tm_raw)) {
           tm_raw  <- state$tm_raw
           pairing <- character(tm_raw$n_rows)
@@ -352,23 +419,98 @@ cpm_contour_server <- function(id) {
           }
         }
 
-        shiny::showNotification("\u2713 Mean and SEM calculated successfully!",
+        shiny::showNotification("\u2713 Analysis complete",
                                 type = "message", duration = 3)
       }, error = function(e) {
         shiny::showNotification(paste("Error processing data:", e$message),
                                 type = "error", duration = 5)
       })
+    }
+
+    # Trigger 1: user clicked "Run Analysis"
+    shiny::observeEvent(input$process, .run_analysis())
+
+    # Trigger 2: auto-run when dfdt_raw, tm_raw, and pairing inputs are all
+    # ready. Same pending-flag pattern as CPM Peak / CPM QC - the pairing
+    # UI renders only AFTER both raw datasets are loaded, so we can't
+    # auto-run directly from observeEvent on either dataset.
+    .contour_pending_run <- shiny::reactiveVal(FALSE)
+    shiny::observeEvent(state$dfdt_raw, {
+      if (!is.null(state$dfdt_raw) && !is.null(state$tm_raw))
+        .contour_pending_run(TRUE)
+    }, ignoreInit = TRUE)
+    shiny::observeEvent(state$tm_raw, {
+      if (!is.null(state$dfdt_raw) && !is.null(state$tm_raw))
+        .contour_pending_run(TRUE)
+    }, ignoreInit = TRUE)
+    shiny::observe({
+      if (!isTRUE(.contour_pending_run())) return()
+      shiny::req(state$dfdt_raw, state$tm_raw)
+      # Wait for all the tm_pair_* inputs to be bound. The pairing UI
+      # renders one selectInput per Tm row; we know how many rows there
+      # are from state$tm_raw$n_rows.
+      n_rows <- state$tm_raw$n_rows
+      for (i in seq_len(n_rows)) {
+        if (is.null(input[[paste0("tm_pair_", i)]])) return()
+      }
+      .contour_pending_run(FALSE)
+      .run_analysis()
     })
 
     # =====================================================================
     # Clear
     # =====================================================================
     shiny::observeEvent(input$clear, {
-      for (k in c("dfdt_raw","tm_raw","dfdt_processed","tm_processed",
-                  "sample_names","temperatures","tm_pairing"))
-        state[[k]] <- NULL
+      current_dfdt_file(NULL); current_tm_file(NULL)
+      .clear_state()
+      # Reload examples so preview is never empty after Clear.
+      tryCatch(.load_example_files(), error = function(e) NULL)
       shiny::showNotification("\u2713 All data cleared",
                               type = "message", duration = 2)
+    })
+
+    # =====================================================================
+    # Trigger 3: session start with bundled examples
+    # =====================================================================
+    # Loads BOTH example files (dF/dT + Tm). The auto-pair observer
+    # below handles the pairing; this just kicks off the file load.
+    .load_example_files <- function() {
+      cf_dfdt <- .cpm_contour_dfdt_example_file()
+      cf_tm   <- .cpm_contour_tm_example_file()
+      if (is.null(cf_dfdt) || is.null(cf_tm)) return(invisible())
+      current_dfdt_file(cf_dfdt)
+      current_tm_file(cf_tm)
+    }
+
+    # Auto-pair Tm rows to dF/dT samples by row order, whenever both
+    # raw datasets are loaded AND no pairing has been set yet. This
+    # fires for ALL loads (example AND user uploads), because lining up
+    # row N of the Tm file with the Nth unique sample of the dF/dT
+    # file is the standard layout - and if a user's data doesn't match
+    # this convention they can still override individual rows via the
+    # pairing dropdowns.
+    #
+    # The `is.null(state$tm_pairing)` guard means we don't trample over
+    # manual edits: once the user has paired (or modified) anything,
+    # this observer no-ops until pairing is reset (which happens on
+    # new file uploads).
+    shiny::observe({
+      shiny::req(state$dfdt_raw, state$tm_raw)
+      if (!is.null(state$tm_pairing)) return()  # don't overwrite manual pairing
+      unique_samples <- unique(state$dfdt_raw$sample_names)
+      n_rows         <- state$tm_raw$n_rows
+      pairing <- character(n_rows)
+      for (i in seq_len(n_rows)) {
+        pairing[i] <- if (i <= length(unique_samples)) unique_samples[i]
+                      else NA_character_
+      }
+      state$tm_pairing <- pairing
+    })
+
+    .example_loader_obs <- shiny::observe({
+      .example_loader_obs$destroy()
+      tryCatch(.load_example_files(), error = function(e)
+        message("[CPM Contour] example load failed: ", conditionMessage(e)))
     })
 
     # =====================================================================
@@ -727,4 +869,53 @@ cpm_contour_server <- function(id) {
       legend.title      = ggplot2::element_text(colour = text_colour, size = 9))
 
   p
+}
+
+# ---- Example data loaders --------------------------------------------------
+# Two small CSV files bundled in inst/examples/:
+#   - cpm_contour_dfdt_example.csv (~10 KB): full dF/dT matrix with replicates
+#   - cpm_contour_tm_example.csv (~150 B):  Tm scatter for the same samples
+# Each loader copies its file to tempdir and returns a data.frame matching
+# what shiny::fileInput would have produced for a single upload. Caches
+# the temp path so revisits don't redo the copy.
+.cpm_contour_dfdt_example_cache <- new.env(parent = emptyenv())
+.cpm_contour_tm_example_cache   <- new.env(parent = emptyenv())
+
+.cpm_contour_example_loader <- function(cache_env, basename_file, display_name) {
+  if (!is.null(cache_env$path) && file.exists(cache_env$path)) {
+    return(data.frame(name = display_name, datapath = cache_env$path,
+                      stringsAsFactors = FALSE))
+  }
+  app_dir_local <- if (exists("app_dir", envir = globalenv())) {
+    get("app_dir", envir = globalenv())
+  } else getwd()
+  candidates <- unique(c(
+    file.path(app_dir_local, "inst", "examples", basename_file),
+    file.path(getwd(),       "inst", "examples", basename_file),
+    file.path("inst", "examples", basename_file)
+  ))
+  src <- candidates[file.exists(candidates)][1]
+  if (is.na(src)) return(NULL)
+  tryCatch({
+    out <- file.path(tempdir(), display_name)
+    file.copy(src, out, overwrite = TRUE)
+    cache_env$path <- out
+    data.frame(name = display_name, datapath = out, stringsAsFactors = FALSE)
+  }, error = function(e) NULL)
+}
+
+.cpm_contour_dfdt_example_file <- function() {
+  .cpm_contour_example_loader(
+    .cpm_contour_dfdt_example_cache,
+    "cpm_contour_dfdt_example.csv",
+    "NB65_Titre___HsUCP1_Apo_Low_Salt_All_Data_dFdT.csv"
+  )
+}
+
+.cpm_contour_tm_example_file <- function() {
+  .cpm_contour_example_loader(
+    .cpm_contour_tm_example_cache,
+    "cpm_contour_tm_example.csv",
+    "NB65_Titre___HsUCP1_Apo_Low_Salt_Tm__Scatter_.csv"
+  )
 }

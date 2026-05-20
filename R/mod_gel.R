@@ -60,7 +60,7 @@ gel_ui <- function(id) {
   cond_western <- sprintf("input['%s'] == 'western'", mode_input)
 
   shiny::tagList(
-    shiny::div(class = "clear-button-container",
+    shiny::div(style = "display: none;",
       shiny::actionButton(ns("clear"), "\U0001f504  Clear All Data", class = "btn-clear")
     ),
 
@@ -75,116 +75,128 @@ gel_ui <- function(id) {
     # GEL TAB
     # =====================================================================
     shiny::conditionalPanel(condition = cond_gel,
-      shiny::fluidRow(
-        # ----- Left sidebar ---------------------------------------------
-        shiny::column(3,
-          lab_card(
-            step_title(1, "Upload Gel Image"),
-            info_box("Upload TIFF, PNG, or JPEG gel images. TIFF files are fully supported."),
-            shiny::fileInput(ns("image"), NULL,
-                             accept = c(".tif",".tiff",".png",".jpg",".jpeg"),
-                             buttonLabel = "Browse\u2026",
-                             placeholder = "No file selected")
+      shiny::div(class = "sticky-tool",
+        shiny::fluidRow(
+          # ----- Left column: workflow controls (scrolls) ---------------
+          shiny::column(3,
+            shiny::div(class = "workflow-col",
+              lab_card(
+                step_title(1, "Upload Gel Image"),
+                info_box("Upload TIFF, PNG, or JPEG gel images. TIFF files are fully supported."),
+                shiny::fileInput(ns("image"), NULL,
+                                 accept = c(".tif",".tiff",".png",".jpg",".jpeg"),
+                                 buttonLabel = "Browse\u2026",
+                                 placeholder = "No file selected")
+              ),
+              lab_card(
+                step_title(2, "Crop (Optional)"),
+                info_box("Drag on the gel image to select crop area. Release, then click Apply to confirm."),
+                shiny::fluidRow(
+                  shiny::column(6, shiny::actionButton(ns("apply_crop"),
+                    "\u2713 Apply Crop", class = "btn-run", style = "width:100%;")),
+                  shiny::column(6, shiny::actionButton(ns("revert_crop"),
+                    "\u21a9 Revert Original", class = "btn-secondary", style = "width:100%;"))
+                ),
+                shiny::uiOutput(ns("crop_status"))
+              ),
+              lab_card(
+                step_title(3, "Mark Features"),
+                info_box("Click on the image to mark ladder bands or sample wells."),
+                shiny::selectInput(ns("mode"), "Marking Mode",
+                  choices = c("Crop" = "crop", "Ladder Bands" = "ladder",
+                              "Sample Wells" = "wells"),
+                  selected = "crop")
+              ),
+              lab_card(
+                step_title(4, "Ladder Type"),
+                shiny::selectInput(ns("ladder_type"), NULL,
+                  choices = c("PageRuler Plus" = "pageruler",
+                              "Precision Plus" = "precision",
+                              "Color Prestained" = "prestained",
+                              "Broad Range" = "broad",
+                              "Custom" = "custom"),
+                  selected = "precision")
+              ),
+              lab_card(
+                step_title(5, "Label Settings"),
+                shiny::fluidRow(
+                  shiny::column(6, shiny::numericInput(ns("fontsize"), "Font Size",
+                    value = 20, min = 10, max = 32, step = 2)),
+                  shiny::column(6, shiny::checkboxInput(ns("bold"), "Bold Text", value = FALSE))
+                ),
+                shiny::fluidRow(
+                  shiny::column(6, shiny::numericInput(ns("ladder_offset"), "Ladder Offset",
+                    value = 60, min = 40, max = 120, step = 10)),
+                  shiny::column(6, shiny::numericInput(ns("well_offset"), "Well Offset",
+                    value = 40, min = 20, max = 80, step = 10))
+                ),
+                shiny::selectInput(ns("text_angle"), "Well Label Orientation",
+                  choices = c("Horizontal" = "0", "Diagonal" = "45", "Vertical" = "90"),
+                  selected = "45")
+              ),
+              lab_card(
+                step_title(6, "Export"),
+                shiny::checkboxInput(ns("preview"), "Preview Mode (hide markers)", value = FALSE),
+                shiny::selectInput(ns("bg_color"), "Export Background",
+                  choices = c("Transparent" = "transparent", "White" = "white"),
+                  selected = "transparent"),
+                shiny::br(),
+                shiny::downloadButton(ns("export"),      "\u2193 Download PNG",  class = "btn-download"),
+                " ",
+                shiny::downloadButton(ns("export_tiff"), "\u2193 Download TIFF", class = "btn-download"),
+                shiny::br(), shiny::br(),
+                shiny::actionButton(ns("clear_markers"),
+                  "\U0001f5d1\ufe0f Clear All Markers", class = "btn-secondary")
+              )
+            )  # close workflow-col
           ),
-          lab_card(
-            step_title(2, "Crop (Optional)"),
-            info_box("Drag on the gel image to select crop area. Release, then click Apply to confirm."),
-            shiny::fluidRow(
-              shiny::column(6, shiny::actionButton(ns("apply_crop"),
-                "\u2713 Apply Crop", class = "btn-run", style = "width:100%;")),
-              shiny::column(6, shiny::actionButton(ns("revert_crop"),
-                "\u21a9 Revert Original", class = "btn-secondary", style = "width:100%;"))
-            ),
-            shiny::uiOutput(ns("crop_status"))
-          ),
-          lab_card(
-            step_title(3, "Mark Features"),
-            info_box("Click on the image to mark ladder bands or sample wells."),
-            shiny::selectInput(ns("mode"), "Marking Mode",
-              choices = c("Crop" = "crop", "Ladder Bands" = "ladder",
-                          "Sample Wells" = "wells"),
-              selected = "crop")
-          ),
-          lab_card(
-            step_title(4, "Ladder Type"),
-            shiny::selectInput(ns("ladder_type"), NULL,
-              choices = c("PageRuler Plus" = "pageruler",
-                          "Precision Plus" = "precision",
-                          "Color Prestained" = "prestained",
-                          "Broad Range" = "broad",
-                          "Custom" = "custom"),
-              selected = "precision")
-          ),
-          lab_card(
-            step_title(5, "Label Settings"),
-            shiny::fluidRow(
-              shiny::column(6, shiny::numericInput(ns("fontsize"), "Font Size",
-                value = 20, min = 10, max = 32, step = 2)),
-              shiny::column(6, shiny::checkboxInput(ns("bold"), "Bold Text", value = FALSE))
-            ),
-            shiny::fluidRow(
-              shiny::column(6, shiny::numericInput(ns("ladder_offset"), "Ladder Offset",
-                value = 60, min = 40, max = 120, step = 10)),
-              shiny::column(6, shiny::numericInput(ns("well_offset"), "Well Offset",
-                value = 40, min = 20, max = 80, step = 10))
-            ),
-            shiny::selectInput(ns("text_angle"), "Well Label Orientation",
-              choices = c("Horizontal" = "0", "Diagonal" = "45", "Vertical" = "90"),
-              selected = "45")
-          ),
-          lab_card(
-            step_title(6, "Export"),
-            shiny::checkboxInput(ns("preview"), "Preview Mode (hide markers)", value = FALSE),
-            shiny::selectInput(ns("bg_color"), "Export Background",
-              choices = c("Transparent" = "transparent", "White" = "white"),
-              selected = "transparent"),
-            shiny::br(),
-            shiny::downloadButton(ns("export"),      "\u2193 Download PNG",  class = "btn-download"),
-            " ",
-            shiny::downloadButton(ns("export_tiff"), "\u2193 Download TIFF", class = "btn-download"),
-            shiny::br(), shiny::br(),
-            shiny::actionButton(ns("clear_markers"),
-              "\U0001f5d1\ufe0f Clear All Markers", class = "btn-secondary")
-          )
-        ),
 
-        # ----- Centre: image display ------------------------------------
-        shiny::column(7,
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f52c  Gel Image"),
-            shiny::conditionalPanel(
-              condition = sprintf("output['%s']", ns("image_loaded")),
-              shiny::uiOutput(ns("preview_notice")),
-              shiny::div(style = "text-align: center;",
-                shiny::plotOutput(ns("plot"), height = "600px",
-                  click = ns("click"),
-                  brush = shiny::brushOpts(id = ns("crop_brush"),
-                    fill = "#00C2FF", stroke = "#00C2FF",
-                    opacity = 0.2, resetOnNew = TRUE)))
-            ),
-            shiny::conditionalPanel(
-              condition = sprintf("!output['%s']", ns("image_loaded")),
-              shiny::div(style = "text-align:center;padding:100px 20px;color:#7A8FAD;",
-                shiny::icon("image", style = "font-size:64px;margin-bottom:20px;"),
-                shiny::h4("No image loaded", style = "color:#7A8FAD;"),
-                shiny::p("Upload a gel image to begin"))
-            )
-          )
-        ),
+          # ----- Centre column: image preview (sticky) ------------------
+          shiny::column(7,
+            shiny::div(class = "preview-col",
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f52c  Gel Image"),
+                shiny::conditionalPanel(
+                  condition = sprintf("output['%s']", ns("image_loaded")),
+                  shiny::uiOutput(ns("preview_notice")),
+                  shiny::div(style = "text-align: center;",
+                    shiny::plotOutput(ns("plot"), height = "600px",
+                      click = ns("click"),
+                      brush = shiny::brushOpts(id = ns("crop_brush"),
+                        fill = "#00C2FF", stroke = "#00C2FF",
+                        opacity = 0.2, resetOnNew = TRUE)))
+                ),
+                shiny::conditionalPanel(
+                  condition = sprintf("!output['%s']", ns("image_loaded")),
+                  shiny::div(style = "text-align:center;padding:100px 20px;color:#7A8FAD;",
+                    shiny::icon("image", style = "font-size:64px;margin-bottom:20px;"),
+                    shiny::h4("No image loaded", style = "color:#7A8FAD;"),
+                    shiny::p("Upload a gel image to begin"))
+                )
+              )
+            )  # close preview-col
+          ),
 
-        # ----- Right sidebar: markers + stats ---------------------------
-        shiny::column(2,
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f3af Ladder Bands"),
-            shiny::uiOutput(ns("ladder_list"))
-          ),
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f9ea Sample Wells"),
-            shiny::uiOutput(ns("wells_list"))
-          ),
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f4ca Statistics"),
-            shiny::uiOutput(ns("stats"))
+          # ----- Right column: marker panels (scrolls) ------------------
+          # Uses workflow-col styling so this column scrolls independently
+          # of the sticky preview. Typically the three panels are short
+          # enough that no scrollbar shows up - but if the user adds
+          # many ladder bands or wells, the column scrolls cleanly.
+          shiny::column(2,
+            shiny::div(class = "workflow-col",
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f3af Ladder Bands"),
+                shiny::uiOutput(ns("ladder_list"))
+              ),
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f9ea Sample Wells"),
+                shiny::uiOutput(ns("wells_list"))
+              ),
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f4ca Statistics"),
+                shiny::uiOutput(ns("stats"))
+              )
+            )  # close workflow-col
           )
         )
       )
@@ -194,94 +206,107 @@ gel_ui <- function(id) {
     # WESTERN TAB
     # =====================================================================
     shiny::conditionalPanel(condition = cond_western,
-      shiny::fluidRow(
-        shiny::column(3,
-          lab_card(
-            step_title(1, "Upload Western Image"),
-            info_box("Upload your western blot image. Use the preview panel to crop and label it."),
-            shiny::fileInput(ns("western"), NULL,
-                             accept = c(".tif",".tiff",".png",".jpg",".jpeg"),
-                             buttonLabel = "Browse\u2026",
-                             placeholder = "No file selected"),
-            shiny::uiOutput(ns("western_status"))
+      shiny::div(class = "sticky-tool",
+        shiny::fluidRow(
+          # ----- Left column: workflow controls (scrolls) ---------------
+          shiny::column(3,
+            shiny::div(class = "workflow-col",
+              lab_card(
+                step_title(1, "Upload Western Image"),
+                info_box("Upload your western blot image. Use the preview panel to crop and label it."),
+                shiny::fileInput(ns("western"), NULL,
+                                 accept = c(".tif",".tiff",".png",".jpg",".jpeg"),
+                                 buttonLabel = "Browse\u2026",
+                                 placeholder = "No file selected"),
+                shiny::uiOutput(ns("western_status"))
+              ),
+              lab_card(
+                step_title(2, "Crop (Optional)"),
+                info_box("Switch to Crop mode, then drag on the preview. Release, then click Apply."),
+                shiny::fluidRow(
+                  shiny::column(6, shiny::actionButton(ns("western_crop_apply"),
+                    "\u2713 Apply Crop", class = "btn-run", style = "width:100%;")),
+                  shiny::column(6, shiny::actionButton(ns("western_revert_crop"),
+                    "\u21a9 Revert Original", class = "btn-secondary", style = "width:100%;"))
+                )
+              ),
+              lab_card(
+                step_title(3, "Mark Ladder Bands"),
+                info_box("Click a band on the preview, enter its MW, then click Add."),
+                shiny::selectInput(ns("western_mode"), "Preview Click Mode",
+                  choices = c("Crop" = "crop", "Mark Ladder Bands" = "ladder"),
+                  selected = "crop", width = "100%"),
+                shiny::conditionalPanel(
+                  condition = sprintf("input['%s'] == 'ladder'", ns("western_mode")),
+                  shiny::br(),
+                  shiny::actionButton(ns("western_clear_bands"),
+                    "\U0001f5d1  Clear All Bands",
+                    class = "btn-secondary",
+                    style = "font-size:0.78rem;padding:0.35rem 0.7rem;width:100%;"))
+              ),
+              lab_card(
+                step_title(4, "Antibody Label"),
+                info_box("Text shown to the right of the western in the stitched export."),
+                shiny::textInput(ns("western_antibody"), NULL,
+                                 placeholder = "e.g. anti-HsUCP1")
+              ),
+              lab_card(
+                step_title(5, "Enhance Contrast"),
+                info_box("0 = no adjustment. Higher values darken bands and lighten background."),
+                shiny::sliderInput(ns("western_contrast"), NULL,
+                  min = 0, max = 15, value = 0, step = 1, width = "100%")
+              ),
+              lab_card(
+                step_title(6, "Stitch & Export"),
+                info_box("Combines the annotated gel (from the Gel tab) with the western below it."),
+                shiny::numericInput(ns("gap_px"), "Gap (px)",
+                  value = 10, min = 0, max = 200, step = 5),
+                shiny::selectInput(ns("gap_color"), "Gap colour",
+                  choices = c("Transparent" = "none", "Black" = "black", "White" = "white"),
+                  selected = "none", width = "100%"),
+                shiny::br(),
+                shiny::downloadButton(ns("stitch_png"),  "\u2193 PNG (Gel + Western)",  class = "btn-download"),
+                shiny::br(), shiny::br(),
+                shiny::downloadButton(ns("stitch_tiff"), "\u2193 TIFF (Gel + Western)", class = "btn-download"),
+                shiny::br(), shiny::br(),
+                shiny::actionButton(ns("western_clear"),
+                  "\u2715  Remove Western", class = "btn-secondary")
+              )
+            )  # close workflow-col
           ),
-          lab_card(
-            step_title(2, "Crop (Optional)"),
-            info_box("Switch to Crop mode, then drag on the preview. Release, then click Apply."),
-            shiny::fluidRow(
-              shiny::column(6, shiny::actionButton(ns("western_crop_apply"),
-                "\u2713 Apply Crop", class = "btn-run", style = "width:100%;")),
-              shiny::column(6, shiny::actionButton(ns("western_revert_crop"),
-                "\u21a9 Revert Original", class = "btn-secondary", style = "width:100%;"))
-            )
+
+          # ----- Centre column: image preview (sticky) ------------------
+          shiny::column(7,
+            shiny::div(class = "preview-col",
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f9ec  Western Blot Preview"),
+                shiny::conditionalPanel(
+                  condition = sprintf("output['%s']", ns("western_loaded")),
+                  info_box("Select 'Mark Ladder Bands' mode in Step 3 to click bands. Select 'Crop' mode to crop."),
+                  shiny::div(style = "text-align:center;",
+                    shiny::plotOutput(ns("western_preview"), height = "420px",
+                      click = ns("western_click"),
+                      brush = shiny::brushOpts(id = ns("western_crop_brush"),
+                        fill = "#00C2FF", stroke = "#00C2FF",
+                        opacity = 0.2, resetOnNew = TRUE)))),
+                shiny::conditionalPanel(
+                  condition = sprintf("!output['%s']", ns("western_loaded")),
+                  shiny::div(style = "text-align:center;padding:80px 20px;color:#7A8FAD;",
+                    shiny::icon("image", style = "font-size:64px;margin-bottom:20px;"),
+                    shiny::h4("No western image loaded", style = "color:#7A8FAD;"),
+                    shiny::p("Upload a western blot image to begin")))
+              )
+            )  # close preview-col
           ),
-          lab_card(
-            step_title(3, "Mark Ladder Bands"),
-            info_box("Click a band on the preview, enter its MW, then click Add."),
-            shiny::selectInput(ns("western_mode"), "Preview Click Mode",
-              choices = c("Crop" = "crop", "Mark Ladder Bands" = "ladder"),
-              selected = "crop", width = "100%"),
-            shiny::conditionalPanel(
-              condition = sprintf("input['%s'] == 'ladder'", ns("western_mode")),
-              shiny::br(),
-              shiny::actionButton(ns("western_clear_bands"),
-                "\U0001f5d1  Clear All Bands",
-                class = "btn-secondary",
-                style = "font-size:0.78rem;padding:0.35rem 0.7rem;width:100%;"))
-          ),
-          lab_card(
-            step_title(4, "Antibody Label"),
-            info_box("Text shown to the right of the western in the stitched export."),
-            shiny::textInput(ns("western_antibody"), NULL,
-                             placeholder = "e.g. anti-HsUCP1")
-          ),
-          lab_card(
-            step_title(5, "Enhance Contrast"),
-            info_box("0 = no adjustment. Higher values darken bands and lighten background."),
-            shiny::sliderInput(ns("western_contrast"), NULL,
-              min = 0, max = 15, value = 0, step = 1, width = "100%")
-          ),
-          lab_card(
-            step_title(6, "Stitch & Export"),
-            info_box("Combines the annotated gel (from the Gel tab) with the western below it."),
-            shiny::numericInput(ns("gap_px"), "Gap (px)",
-              value = 10, min = 0, max = 200, step = 5),
-            shiny::selectInput(ns("gap_color"), "Gap colour",
-              choices = c("Transparent" = "none", "Black" = "black", "White" = "white"),
-              selected = "none", width = "100%"),
-            shiny::br(),
-            shiny::downloadButton(ns("stitch_png"),  "\u2193 PNG (Gel + Western)",  class = "btn-download"),
-            shiny::br(), shiny::br(),
-            shiny::downloadButton(ns("stitch_tiff"), "\u2193 TIFF (Gel + Western)", class = "btn-download"),
-            shiny::br(), shiny::br(),
-            shiny::actionButton(ns("western_clear"),
-              "\u2715  Remove Western", class = "btn-secondary")
-          )
-        ),
-        shiny::column(7,
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f9ec  Western Blot Preview"),
-            shiny::conditionalPanel(
-              condition = sprintf("output['%s']", ns("western_loaded")),
-              info_box("Select 'Mark Ladder Bands' mode in Step 3 to click bands. Select 'Crop' mode to crop."),
-              shiny::div(style = "text-align:center;",
-                shiny::plotOutput(ns("western_preview"), height = "420px",
-                  click = ns("western_click"),
-                  brush = shiny::brushOpts(id = ns("western_crop_brush"),
-                    fill = "#00C2FF", stroke = "#00C2FF",
-                    opacity = 0.2, resetOnNew = TRUE)))),
-            shiny::conditionalPanel(
-              condition = sprintf("!output['%s']", ns("western_loaded")),
-              shiny::div(style = "text-align:center;padding:80px 20px;color:#7A8FAD;",
-                shiny::icon("image", style = "font-size:64px;margin-bottom:20px;"),
-                shiny::h4("No western image loaded", style = "color:#7A8FAD;"),
-                shiny::p("Upload a western blot image to begin")))
-          )
-        ),
-        shiny::column(2,
-          lab_card(
-            shiny::div(class = "lab-card-title", "\U0001f3af Ladder Bands"),
-            shiny::uiOutput(ns("western_ladder_list"))
+
+          # ----- Right column: marker panel (scrolls) -------------------
+          shiny::column(2,
+            shiny::div(class = "workflow-col",
+              lab_card(
+                shiny::div(class = "lab-card-title", "\U0001f3af Ladder Bands"),
+                shiny::uiOutput(ns("western_ladder_list"))
+              )
+            )  # close workflow-col
           )
         )
       )
@@ -320,27 +345,38 @@ gel_server <- function(id) {
     # GEL: image load, clear, crop
     # ====================================================================
 
+    # Internal: set the gel image from any source (upload or example).
+    # Resets all marker/crop state so loading a new image always gives
+    # the user a clean canvas to work on.
+    .load_gel_image <- function(img) {
+      if (is.null(img)) return(invisible())
+      info <- magick::image_info(img)
+      state$image_original  <- img
+      state$image           <- img
+      state$image_width     <- info$width
+      state$image_height    <- info$height
+      state$cropped         <- FALSE
+      state$ladder_markers  <- .empty_markers("ladder")
+      state$well_markers    <- .empty_markers("well")
+      state$crop_corners    <- list()
+      state$crop_active     <- FALSE
+      state$gel_crop_pending <- NULL
+    }
+
     shiny::observeEvent(input$image, {
       shiny::req(input$image)
       tryCatch({
-        img      <- magick::image_read(input$image$datapath)
-        img_info <- magick::image_info(img)
-        state$image_original <- img
-        state$image          <- img
-        state$image_width    <- img_info$width
-        state$image_height   <- img_info$height
-        state$cropped        <- FALSE
-        state$ladder_markers <- .empty_markers("ladder")
-        state$well_markers   <- .empty_markers("well")
-        state$crop_corners   <- list()
-        state$crop_active    <- FALSE
+        .load_gel_image(magick::image_read(input$image$datapath))
         shiny::showNotification("\u2713 Image loaded successfully",
                                 type = "message", duration = 2)
       }, error = function(e)
         shiny::showNotification(paste("Error loading image:", e$message),
                                 type = "error", duration = 5))
-    })
+    }, ignoreInit = TRUE)
 
+    # Navbar Clear button: wipe both gel AND western state, then reload
+    # both examples so the previews are never empty. Same "Clear =
+    # reset to known-good state" semantics as the other tools.
     shiny::observeEvent(input$clear, {
       state$image          <- NULL
       state$image_width    <- NULL; state$image_height <- NULL
@@ -348,6 +384,21 @@ gel_server <- function(id) {
       state$well_markers   <- .empty_markers("well")
       state$crop_corners   <- list()
       state$crop_active    <- FALSE; state$cropped <- FALSE
+      state$gel_crop_pending <- NULL
+      # Western state too
+      state$western_image          <- NULL
+      state$western_raw            <- NULL
+      state$western_original       <- NULL
+      state$western_crop_active    <- FALSE
+      state$western_crop_corners   <- list()
+      state$western_ladder_markers <- data.frame(
+        x = numeric(), y = numeric(), mw = numeric(),
+        stringsAsFactors = FALSE)
+      state$western_pending_click  <- NULL
+      state$western_plot_trigger   <- 0
+      state$western_crop_pending   <- NULL
+      tryCatch(.load_gel_example(),     error = function(e) NULL)
+      tryCatch(.load_western_example(), error = function(e) NULL)
       shiny::showNotification("\u2713 All data cleared",
                               type = "message", duration = 2)
     })
@@ -783,25 +834,32 @@ gel_server <- function(id) {
     output$western_loaded <- shiny::reactive({ !is.null(state$western_image) })
     shiny::outputOptions(output, "western_loaded", suspendWhenHidden = FALSE)
 
+    # Internal: set the western image from any source (upload or example).
+    # Mirrors .load_gel_image() but for the western state bucket.
+    .load_western_image <- function(img) {
+      if (is.null(img)) return(invisible())
+      state$western_raw            <- img
+      state$western_image          <- img
+      state$western_original       <- img
+      state$western_crop_active    <- FALSE
+      state$western_crop_corners   <- list()
+      state$western_ladder_markers <- data.frame(
+        x = numeric(), y = numeric(), mw = numeric(),
+        stringsAsFactors = FALSE)
+      state$western_pending_click  <- NULL
+      state$western_plot_trigger   <- 0
+      state$western_crop_pending   <- NULL
+    }
+
     shiny::observeEvent(input$western, {
       shiny::req(input$western)
       tryCatch({
-        img <- magick::image_read(input$western$datapath)
-        state$western_raw            <- img
-        state$western_image          <- img
-        state$western_original       <- img
-        state$western_crop_active    <- FALSE
-        state$western_crop_corners   <- list()
-        state$western_ladder_markers <- data.frame(
-          x = numeric(), y = numeric(), mw = numeric(),
-          stringsAsFactors = FALSE)
-        state$western_pending_click  <- NULL
-        state$western_plot_trigger   <- 0
+        .load_western_image(magick::image_read(input$western$datapath))
         shiny::showNotification("\u2713 Western blot loaded",
                                 type = "message", duration = 2)
       }, error = function(e)
         shiny::showNotification(paste("Error:", e$message), type = "error"))
-    })
+    }, ignoreInit = TRUE)
 
     shiny::observeEvent(input$western_clear, {
       state$western_image          <- NULL
@@ -1016,6 +1074,34 @@ gel_server <- function(id) {
         shiny::showNotification("\u2713 TIFF exported successfully!",
                                 type = "message", duration = 3)
       })
+
+    # ====================================================================
+    # Session-start example loaders
+    # ====================================================================
+    # Two one-shot observers, one per mode. Same self-destruct pattern
+    # used in AKTA/BCA/CPM Peak/CPM QC. Each loader pulls a small
+    # bundled image from inst/examples/, decodes it via magick, and
+    # routes it through the same .load_*_image() helper the upload
+    # observers use - so the example and a user upload populate state
+    # in identical ways.
+    .load_gel_example <- function() {
+      img <- .gel_example_image()
+      if (!is.null(img)) .load_gel_image(img)
+    }
+    .load_western_example <- function() {
+      img <- .western_example_image()
+      if (!is.null(img)) .load_western_image(img)
+    }
+    .gel_example_obs <- shiny::observe({
+      .gel_example_obs$destroy()
+      tryCatch(.load_gel_example(), error = function(e)
+        message("[Gel] gel example load failed: ", conditionMessage(e)))
+    })
+    .western_example_obs <- shiny::observe({
+      .western_example_obs$destroy()
+      tryCatch(.load_western_example(), error = function(e)
+        message("[Gel] western example load failed: ", conditionMessage(e)))
+    })
 
     # ---- Public reactive ------------------------------------------------
     shiny::reactive({
@@ -1378,4 +1464,50 @@ gel_server <- function(id) {
   out <- magick::image_append(c(gel_img, gap, west_img), stack = TRUE)
   magick::image_write(out, path = gel_png_path, format = format)
   gel_png_path
+}
+
+# ---- Example image loaders -------------------------------------------------
+# Both gel and western examples are bundled in inst/examples/ as small
+# raster files (gel TIFF ~744 KB, western JPEG ~14 KB). We decode them
+# via magick::image_read() and cache the resulting magick-image object
+# in a per-loader environment so revisiting the tab doesn't re-decode.
+#
+# Magick can read directly from any file path (no compression hoops
+# needed like AKTA's gzipped CSV), so the helpers are simple.
+.gel_example_cache     <- new.env(parent = emptyenv())
+.western_example_cache <- new.env(parent = emptyenv())
+
+.gel_example_image <- function() {
+  if (!is.null(.gel_example_cache$img)) return(.gel_example_cache$img)
+  src <- .resolve_example_path("gel_example.tif")
+  if (is.na(src)) return(NULL)
+  tryCatch({
+    img <- magick::image_read(src)
+    .gel_example_cache$img <- img
+    img
+  }, error = function(e) NULL)
+}
+
+.western_example_image <- function() {
+  if (!is.null(.western_example_cache$img)) return(.western_example_cache$img)
+  src <- .resolve_example_path("western_example.jpg")
+  if (is.na(src)) return(NULL)
+  tryCatch({
+    img <- magick::image_read(src)
+    .western_example_cache$img <- img
+    img
+  }, error = function(e) NULL)
+}
+
+# Shared path resolver - same defensive pattern used elsewhere
+.resolve_example_path <- function(filename) {
+  app_dir_local <- if (exists("app_dir", envir = globalenv())) {
+    get("app_dir", envir = globalenv())
+  } else getwd()
+  candidates <- unique(c(
+    file.path(app_dir_local, "inst", "examples", filename),
+    file.path(getwd(),       "inst", "examples", filename),
+    file.path("inst", "examples", filename)
+  ))
+  candidates[file.exists(candidates)][1]
 }
