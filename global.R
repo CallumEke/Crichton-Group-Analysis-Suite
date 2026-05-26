@@ -60,7 +60,6 @@ library(gridExtra)
 library(magick)
 
 # -- Shiny upload size limit --------------------------------------------------
-<<<<<<< HEAD
 # Default is 5 MB; raise to 20 MB so larger UNICORN exports (long runs,
 # fine-grained datapoints) fit comfortably AND multi-file overlays don't
 # bump up against the limit. This is the upper bound for the TOTAL
@@ -72,14 +71,6 @@ library(magick)
 # belt-and-braces measure - some Shiny hosting environments don't pick
 # up options() set here in global.R.
 options(shiny.maxRequestSize = 20 * 1024^2)
-=======
-# Default is 5 MB; raise to 10 MB so larger UNICORN exports (long runs,
-# fine-grained datapoints) fit. This is the upper bound for the TOTAL
-# upload payload - when AKTA users select multiple files at once for
-# overlay plots, the combined size of all selected files must fit
-# under this limit, not each file individually.
-options(shiny.maxRequestSize = 10 * 1024^2)
->>>>>>> 40d215cebc00d1a662419b518ddfa2f02a025593
 
 # -- App directory ------------------------------------------------------------
 # RStudio's Run App button sets wd to the app folder; this guards against
