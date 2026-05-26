@@ -2895,10 +2895,17 @@
   },
   "files": {
     "app.R": {
+<<<<<<< HEAD
       "checksum": "5d35cbe907a6eea2fb5ff986c3a12d67"
     },
     "global.R": {
       "checksum": "898a8f9aee6e8451fe21e4d6cd3c402b"
+=======
+      "checksum": "99d67a69e12066029f170378e0fde957"
+    },
+    "global.R": {
+      "checksum": "c913ddbac8e8f6ffd024f2e932ce2723"
+>>>>>>> 40d215cebc00d1a662419b518ddfa2f02a025593
     },
     "inst/analytics/plot_akta_improved.R": {
       "checksum": "23d7cc5deb4a9a683c456dcfce6ea8ff"
@@ -2915,12 +2922,15 @@
     "inst/examples/bca_example.xls": {
       "checksum": "c531e39fea18be0516d7002352c43da1"
     },
+<<<<<<< HEAD
     "inst/examples/cpm_contour_dfdt_example.csv": {
       "checksum": "a3830f869c14b7e46c07ae758427773f"
     },
     "inst/examples/cpm_contour_tm_example.csv": {
       "checksum": "613250277a9552d3f7c64a828e8bf2c4"
     },
+=======
+>>>>>>> 40d215cebc00d1a662419b518ddfa2f02a025593
     "inst/examples/cpm_qc_multi_example.csv": {
       "checksum": "70ae471d4469d2cb04eabd9bd5c884e4"
     },
@@ -2930,6 +2940,7 @@
     "inst/examples/gel_example.tif": {
       "checksum": "56dfeeade6828853c4837388580bb96e"
     },
+<<<<<<< HEAD
     "inst/examples/ucp1/Conductance_Example_CapacityCal.csv": {
       "checksum": "a12117f826faa714171adf551d739198"
     },
@@ -2978,6 +2989,8 @@
     "inst/examples/ucp1/Conductance_Example_RawData_Sample9.csv": {
       "checksum": "4c603c7a6b9d762edaa40197990ce857"
     },
+=======
+>>>>>>> 40d215cebc00d1a662419b518ddfa2f02a025593
     "inst/examples/western_example.jpg": {
       "checksum": "ca2b9ed76f7c2c5093af7e4469b4b90f"
     },
@@ -2994,10 +3007,20 @@
       "checksum": "165f7627623d949dad6a4ad728c5edd0"
     },
     "R/mod_cpm_contour.R": {
+<<<<<<< HEAD
       "checksum": "925ca0a811cd5573a4b11950663af072"
     },
     "R/mod_cpm_qc.R": {
       "checksum": "9ee25c3dea6553efd434f975774817a3"
+=======
+      "checksum": "dc6be46b143158eaa69c545e29055d45"
+    },
+    "R/mod_cpm_qc.R": {
+      "checksum": "9ee25c3dea6553efd434f975774817a3"
+    },
+    "R/mod_export.R": {
+      "checksum": "06689afead7edb0d73a9822d8bb981bf"
+>>>>>>> 40d215cebc00d1a662419b518ddfa2f02a025593
     },
     "R/mod_gel.R": {
       "checksum": "26e35caee7d09ed43ca8ac1c8c3979d7"
@@ -3006,7 +3029,11 @@
       "checksum": "39c64d1679c8685b20a30fbef2de5e17"
     },
     "R/mod_ucp1.R": {
+<<<<<<< HEAD
       "checksum": "cb00785ddfdd7d74440797a999493d79"
+=======
+      "checksum": "4535145594a42b966375c250c134f5c6"
+>>>>>>> 40d215cebc00d1a662419b518ddfa2f02a025593
     },
     "R/utils_theme.R": {
       "checksum": "b282aa0b9d2b4c1d82786baa411d842e"
